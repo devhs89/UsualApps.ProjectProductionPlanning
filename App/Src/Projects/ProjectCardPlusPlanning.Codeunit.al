@@ -9,6 +9,7 @@ using Microsoft.Service.Document;
 
 codeunit 71826210 ProjectCardPlusPlanningUAS
 {
+    TableNo = "Job Planning Line";
     local procedure ProjectCardPlusPlanningUAS__IsUnplannedDemandOfJobPlanningLineOrigin(var UnplannedDemand: Record "Unplanned Demand"): Boolean
     var
         Result: Boolean;
