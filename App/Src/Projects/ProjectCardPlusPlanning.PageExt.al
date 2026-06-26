@@ -25,7 +25,7 @@ pageextension 71826210 ProjectCardPlusPlanningUAS extends "Job Card"
                         TempReqLine: Record "Requisition Line" temporary;
                         TempUnplannedDemand: Record "Unplanned Demand" temporary;
                         GetUnplannedDemand: Codeunit "Get Unplanned Demand";
-                        OrderPlanPage: Page "Order Planning";
+                        ProjPlan: Page ProjectPlanningExtdUAS;
                     begin
                         TempUnplannedDemand.FilterGroup(187);
                         TempUnplannedDemand.SetCurrentKey("Demand Type", "Demand Order No.", PlanningOriginUAS);
@@ -37,10 +37,9 @@ pageextension 71826210 ProjectCardPlusPlanningUAS extends "Job Card"
                         Message(TempUnplannedDemand.Count.ToText());
                         TempReqLine.TransferFromUnplannedDemand(TempUnplannedDemand);
                         Message(TempReqLine.Count.ToText());
-                        OrderPlanPage.SetDemandOrderSourceType("Demand Order Source Type"::"Job Demand");
-                        OrderPlanPage.SetRecord(TempReqLine);
-                        OrderPlanPage.SetTableView(TempReqLine);
-                        OrderPlanPage.Run();
+                        ProjPlan.SetRecord(TempReqLine);
+                        ProjPlan.SetTableView(TempReqLine);
+                        ProjPlan.Run();
                     end;
                 }
                 action(PurchasePlanningUAS)

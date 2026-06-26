@@ -1,92 +1,124 @@
 namespace UsualApps.ProjectProductionPlanning;
 
-using Microsoft.Sales.Document;
+using Microsoft.Inventory.Requisition;
+using Microsoft.Projects.Project.Job;
+using Microsoft.Projects.Project.Planning;
 
 page 71826210 ProjectPlanningExtdUAS
 {
     Caption = 'Project Planning';
-    SourceTable = PlanningProjectLineUAS;
+    SourceTable = "Requisition Line";
     SourceTableTemporary = true;
-    DataCaptionFields = ProjectNo;
+    SourceTableView = where("Replenishment System" = const("Prod. Order"));
+    DataCaptionExpression = this.GetDataCaption();
     ApplicationArea = Planning;
-    PageType = List;
+    PageType = Worksheet;
 
     layout
     {
         area(Content)
         {
-            field(ProjectNo; Rec.ProjectNo)
+            repeater(Main)
             {
-                ToolTip = 'Specifies the project number.';
-            }
-            field(ProjectDescription; Rec.ProjectDescription)
-            {
-                ToolTip = 'Specifies the project description.';
-            }
-            field(ProjectContractEntryNo; Rec.ProjectContractEntryNo)
-            {
-                ToolTip = 'Specifies the project contract entry number.';
-            }
-            field(ProjectTaskNo; Rec.ProjectTaskNo)
-            {
-                ToolTip = 'Specifies the project task number.';
-            }
-            field(ProjectPlanningLineNo; Rec.ProjectPlanningLineNo)
-            {
-                ToolTip = 'Specifies the project planning line number.';
-            }
-            field(ItemNo; Rec.ItemNo)
-            {
-                ToolTip = 'Specifies the item number.';
-            }
-            field(VariantCode; Rec.VariantCode)
-            {
-                ToolTip = 'Specifies the variant code.';
-            }
-            field(Description; Rec.Description)
-            {
-                ToolTip = 'Specifies the item description.';
-            }
-            field(Description2; Rec.Description2)
-            {
-                ToolTip = 'Specifies the item description 2.';
-            }
-            field(PlannedDeliveryDate; Rec.PlannedDeliveryDate)
-            {
-                ToolTip = 'Specifies the planned delivery date.';
-            }
-            field(ExpectedDeliveryDate; Rec.ExpectedDeliveryDate)
-            {
-                ToolTip = 'Specifies the expected delivery date.';
-            }
-            field(QtyAvailable; Rec.QtyAvailable)
-            {
-                ToolTip = 'Specifies the quantity available.';
-            }
-            field(NextPlanningDate; Rec.NextPlanningDate)
-            {
-                ToolTip = 'Specifies the next planning date.';
-            }
-            field(PlanningStatus; Rec.PlanningStatus)
-            {
-                ToolTip = 'Specifies the planning status.';
-            }
-            field(NeedsReplanning; Rec.NeedsReplanning)
-            {
-                ToolTip = 'Specifies if the planning line needs replanning.';
-            }
-            field(PlannedQuantity; Rec.PlannedQuantity)
-            {
-                ToolTip = 'Specifies the planned quantity.';
-            }
-            field(LowLevelCode; Rec.LowLevelCode)
-            {
-                ToolTip = 'Specifies the low-level code.';
+                field("Demand Date"; Rec."Demand Date")
+                {
+                    ToolTip = 'Specifies the date when the demand order line is required.';
+                }
+                field(Status; Rec.Status)
+                {
+                    ToolTip = 'Specifies the status of the demand.';
+                    Visible = false;
+                }
+                field("No."; Rec."No.")
+                {
+                    ToolTip = 'Specifies the item number.';
+                }
+                field("Variant Code"; Rec."Variant Code")
+                {
+                    ToolTip = 'Specifies the variant code.';
+                }
+                field(Description; Rec.Description)
+                {
+                    ToolTip = 'Specifies the item description.';
+                }
+                field("Location Code"; Rec."Location Code")
+                {
+                    ToolTip = 'Specifies the location code.';
+                }
+                field("Bin Code"; Rec."Bin Code")
+                {
+                    ToolTip = 'Specifies the bin code.';
+                }
+                field("Direct Unit Cost"; Rec."Direct Unit Cost")
+                {
+                    ToolTip = 'Specifies the direct unit cost.';
+                }
+                field(Reserve; Rec.Reserve)
+                {
+                    ToolTip = 'Specifies the reserve status.';
+                }
+                field("Demand Quantity"; Rec."Demand Quantity")
+                {
+                    ToolTip = 'Specifies the demand quantity.';
+                }
+                field("Demand Qty. Available"; Rec."Demand Qty. Available")
+                {
+                    ToolTip = 'Specifies the available demand quantity.';
+                }
+                field("Needed Quantity"; Rec."Needed Quantity")
+                {
+                    ToolTip = 'Specifies the needed quantity.';
+                }
+                field(Quantity; Rec.Quantity)
+                {
+                    ToolTip = 'Specifies the quantity to order';
+                }
+                field("Reserved Quantity"; Rec."Reserved Quantity")
+                {
+                    ToolTip = 'Specifies the reserved quantity.';
+                }
+                field("Unit of Measure Code"; Rec."Unit of Measure Code")
+                {
+                    ToolTip = 'Specifies the unit of measure code.';
+                }
+                field("Unit Of Measure Code (Demand)"; Rec."Unit Of Measure Code (Demand)")
+                {
+                    ToolTip = 'Specifies the unit of measure code for the demand quantity.';
+                }
+                field("Order Date"; Rec."Order Date")
+                {
+                    ToolTip = 'Specifies the date when the order was placed.';
+                }
+                field("Due Date"; Rec."Due Date")
+                {
+                    ToolTip = 'Specifies the date when the order is due.';
+                }
             }
         }
     }
 
     var
-        _: Record "Sales Planning Line";
-        __: Page "Sales Order Planning";
+        Job: Record Job;
+        JobLine: Record "Job Planning Line";
+
+    local procedure SetJob(): Boolean
+    begin
+        exit(this.Job.Get(Rec."Demand Order No."));
+    end;
+
+    local procedure SetJobLine(): Boolean
+    begin
+        this.JobLine.SetCurrentKey("Job No.", "Job Contract Entry No.");
+        this.JobLine.SetRange("Job No.", Rec."Demand Order No.");
+        this.JobLine.SetRange("Job Contract Entry No.", Rec."Demand Ref. No.");
+        exit(this.JobLine.FindFirst());
+    end;
+
+    local procedure GetDataCaption(): Text[130]
+    var
+        CaptionStr: Text[130];
+    begin
+        CaptionStr := this.SetJob() ? (StrSubstNo('%1 . %2', this.Job."No.", this.Job.Description)) : (Rec."Demand Order No.");
+        exit(CaptionStr);
+    end;
 }
