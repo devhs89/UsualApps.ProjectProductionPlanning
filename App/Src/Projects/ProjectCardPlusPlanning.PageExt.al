@@ -2,6 +2,7 @@ namespace UsualApps.ProjectProductionPlanning;
 
 using Microsoft.Inventory.Planning;
 using Microsoft.Inventory.Requisition;
+using Microsoft.Inventory.Item;
 using Microsoft.Projects.Project.Job;
 
 pageextension 71826210 ProjectCardPlusPlanningUAS extends "Job Card"
@@ -25,21 +26,29 @@ pageextension 71826210 ProjectCardPlusPlanningUAS extends "Job Card"
                         TempReqLine: Record "Requisition Line" temporary;
                         TempUnplannedDemand: Record "Unplanned Demand" temporary;
                         GetUnplannedDemand: Codeunit "Get Unplanned Demand";
-                        ProjPlan: Page ProjectPlanningExtdUAS;
                     begin
                         TempUnplannedDemand.FilterGroup(187);
                         TempUnplannedDemand.SetCurrentKey("Demand Type", "Demand Order No.", PlanningOriginUAS);
-                        TempUnplannedDemand.SetRange("Demand Type", "Demand Order Source Type"::"Job Demand");
+                        TempUnplannedDemand.SetRange("Demand Type", "Demand Order Source Type"::"Job Demand".AsInteger());
                         TempUnplannedDemand.SetRange("Demand Order No.", Rec."No.");
                         TempUnplannedDemand.SetRange(PlanningOriginUAS, "Planning Line Origin Type"::JobPlanningLinesUAS);
                         TempUnplannedDemand.FilterGroup(0);
                         GetUnplannedDemand.Run(TempUnplannedDemand);
-                        Message(TempUnplannedDemand.Count.ToText());
-                        TempReqLine.TransferFromUnplannedDemand(TempUnplannedDemand);
-                        Message(TempReqLine.Count.ToText());
-                        ProjPlan.SetRecord(TempReqLine);
-                        ProjPlan.SetTableView(TempReqLine);
-                        ProjPlan.Run();
+
+                        repeat
+                            Message(TempUnplannedDemand."Item No.");
+                            TempReqLine.TransferFromUnplannedDemand(TempUnplannedDemand);
+                            TempReqLine.SetSupplyQty(TempUnplannedDemand."Quantity (Base)", TempUnplannedDemand."Needed Qty. (Base)");
+                            TempReqLine.SetSupplyDates(TempUnplannedDemand."Demand Date");
+                            if TempReqLine.Insert() then;
+                        until TempUnplannedDemand.Next() = 0;
+
+                        TempReqLine.Reset();
+                        TempReqLine.SetRange("Worksheet Template Name", '');
+                        TempReqLine.SetRange("User ID", UserId);
+                        TempReqLine.SetRange("Replenishment System", Enum::"Replenishment System"::"Prod. Order");
+                        if TempReqLine.FindSet() then;
+                        Page.Run(Page::ProjectPlanningExtdUAS, TempReqLine);
                     end;
                 }
                 action(PurchasePlanningUAS)

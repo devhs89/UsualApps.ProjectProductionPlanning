@@ -1,16 +1,12 @@
 namespace UsualApps.ProjectProductionPlanning;
 
 using Microsoft.Inventory.Requisition;
-using Microsoft.Projects.Project.Job;
-using Microsoft.Projects.Project.Planning;
 
 page 71826210 ProjectPlanningExtdUAS
 {
     Caption = 'Project Planning';
     SourceTable = "Requisition Line";
     SourceTableTemporary = true;
-    SourceTableView = where("Replenishment System" = const("Prod. Order"));
-    DataCaptionExpression = this.GetDataCaption();
     ApplicationArea = Planning;
     PageType = Worksheet;
 
@@ -96,29 +92,4 @@ page 71826210 ProjectPlanningExtdUAS
             }
         }
     }
-
-    var
-        Job: Record Job;
-        JobLine: Record "Job Planning Line";
-
-    local procedure SetJob(): Boolean
-    begin
-        exit(this.Job.Get(Rec."Demand Order No."));
-    end;
-
-    local procedure SetJobLine(): Boolean
-    begin
-        this.JobLine.SetCurrentKey("Job No.", "Job Contract Entry No.");
-        this.JobLine.SetRange("Job No.", Rec."Demand Order No.");
-        this.JobLine.SetRange("Job Contract Entry No.", Rec."Demand Ref. No.");
-        exit(this.JobLine.FindFirst());
-    end;
-
-    local procedure GetDataCaption(): Text[130]
-    var
-        CaptionStr: Text[130];
-    begin
-        CaptionStr := this.SetJob() ? (StrSubstNo('%1 . %2', this.Job."No.", this.Job.Description)) : (Rec."Demand Order No.");
-        exit(CaptionStr);
-    end;
 }
