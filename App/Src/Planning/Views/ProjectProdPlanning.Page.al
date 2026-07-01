@@ -94,7 +94,51 @@ page 71826210 ProjectProdPlanningUAS
         }
     }
 
-    procedure CopyRecords(var TempReqLine: Record "Requisition Line" temporary)
+    actions
+    {
+        area(Navigation)
+        {
+            action(AutofillProdQuantitiesUAS)
+            {
+                Caption = 'Autofill Prod. Quantities';
+                ToolTip = 'Autofills the production quantities for all demand lines.';
+                Image = AutofillQtyToHandle;
+                trigger OnAction()
+                var
+                    TempReqLine: Record "Requisition Line" temporary;
+                begin
+                    TempReqLine.Copy(Rec, true);
+                    repeat
+                        TempReqLine.Validate(Quantity, TempReqLine."Needed Quantity");
+                        if TempReqLine.Modify(false) then;
+                    until TempReqLine.Next() = 0;
+                end;
+            }
+
+            action(DeleteProdQuantitiesUAS)
+            {
+                Caption = 'Delete Prod. Quantities';
+                ToolTip = 'Autofills the production quantities for all demand lines.';
+                Image = DeleteQtyToHandle;
+                trigger OnAction()
+                var
+                    TempReqLine: Record "Requisition Line" temporary;
+                begin
+                    TempReqLine.Copy(Rec, true);
+                    repeat
+                        TempReqLine.Validate(Quantity, 0);
+                        if TempReqLine.Modify(false) then;
+                    until TempReqLine.Next() = 0;
+                end;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Copies the records from the temporary requisition line table to the page's source table.
+    /// </summary>
+    /// <param name="TempReqLine">The temporary requisition line record containing the records to copy.</param>
+    internal procedure CopyRecords(var TempReqLine: Record "Requisition Line" temporary)
     begin
         Rec.Copy(TempReqLine, true);
     end;

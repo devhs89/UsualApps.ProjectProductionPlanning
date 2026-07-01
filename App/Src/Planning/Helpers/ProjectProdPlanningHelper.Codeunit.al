@@ -13,7 +13,12 @@ codeunit 71826211 ProjectProdPlanningHelper
     /// <param name="UnplanDemand">The unplanned demand record to set the filter on.</param>
     /// <param name="Job"> The job planning line record to use for filtering.</param>
     internal procedure ProjectProdPlanningHelper__SetJobPlanningCustomFilterGroup(var UnplanDemand: Record "Unplanned Demand"; Job: Record Job)
+    var
+        ReqLine2: Record "Requisition Line";
     begin
+        this.ProjectProdPlanningHelper__SetReqLineFiltersToProdOrder(ReqLine2);
+        if ReqLine2.Count() > 0 then ReqLine2.DeleteAll();
+
         UnplanDemand.FilterGroup(187);
         UnplanDemand.SetCurrentKey("Demand Type", "Demand Order No.", PlanningOriginUAS);
         UnplanDemand.SetRange("Demand Type", "Demand Order Source Type"::"Job Demand".AsInteger());
@@ -27,13 +32,9 @@ codeunit 71826211 ProjectProdPlanningHelper
     /// </summary>
     /// <param name="ReqLine">The requisition line record to transfer the unplanned demand to.</param>
     /// <param name="UnplanDemand">The unplanned demand record to transfer from.</param>
-    internal procedure ProjectProdPlanningHelper__TransferUnplannedDemandToRequisitionLine(var ReqLine: Record "Requisition Line"; UnplanDemand: Record "Unplanned Demand")
-    var
-        ReqLine2: Record "Requisition Line";
+    internal procedure ProjectProdPlanningHelper__TransferUnplannedDemandToRequisitionLine(var ReqLine: Record "Requisition Line"; var UnplanDemand: Record "Unplanned Demand")
     begin
-        this.ProjectProdPlanningHelper__SetReqLineFiltersToProdOrder(ReqLine2);
-        if ReqLine2.Count() > 0 then ReqLine2.DeleteAll();
-
+        if UnplanDemand.FindSet() then;
         repeat
             ReqLine.TransferFromUnplannedDemand(UnplanDemand);
             ReqLine.SetSupplyQty(UnplanDemand."Quantity (Base)", UnplanDemand."Needed Qty. (Base)");
