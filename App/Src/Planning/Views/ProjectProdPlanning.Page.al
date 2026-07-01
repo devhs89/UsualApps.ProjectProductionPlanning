@@ -110,7 +110,7 @@ page 71826210 ProjectProdPlanningUAS
                 var
                     Helper: Codeunit ProjectProdPlanningHelper;
                 begin
-                    Helper.ProjectProdPlanningHelper__ToggleReserveCheckbox(Rec, (not Rec.Reserve));
+                    Helper.ProjectProdPlanningHelper__ToggleReserveCheckbox(Rec);
                 end;
             }
             action(ToggleSupplyQuantitiesUAS)
