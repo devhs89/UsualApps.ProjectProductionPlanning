@@ -2,13 +2,14 @@ namespace UsualApps.ProjectProductionPlanning;
 
 using Microsoft.Inventory.Requisition;
 
-page 71826210 ProjectPlanningExtdUAS
+page 71826210 ProjectProdPlanningUAS
 {
-    Caption = 'Project Planning';
+    Caption = 'Create Project Production Orders';
     SourceTable = "Requisition Line";
     SourceTableTemporary = true;
     ApplicationArea = Planning;
     PageType = Worksheet;
+    InsertAllowed = false;
 
     layout
     {
@@ -92,4 +93,9 @@ page 71826210 ProjectPlanningExtdUAS
             }
         }
     }
+
+    procedure CopyRecords(var TempReqLine: Record "Requisition Line" temporary)
+    begin
+        Rec.Copy(TempReqLine, true);
+    end;
 }

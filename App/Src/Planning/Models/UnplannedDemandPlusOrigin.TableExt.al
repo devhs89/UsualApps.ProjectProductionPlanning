@@ -4,7 +4,7 @@ using Microsoft.Inventory.Planning;
 tableextension 71826210 UnplannedDemandPlusOriginUAS extends "Unplanned Demand"
 {
     AllowInCustomizations = Never;
-    
+
     fields
     {
         field(71826210; PlanningOriginUAS; Enum "Planning Line Origin Type")
