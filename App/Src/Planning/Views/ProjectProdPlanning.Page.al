@@ -108,6 +108,7 @@ page 71826210 ProjectProdPlanningUAS
                     TempReqLine: Record "Requisition Line" temporary;
                 begin
                     TempReqLine.Copy(Rec, true);
+                    if TempReqLine.FindSet() then;
                     repeat
                         TempReqLine.Validate(Quantity, TempReqLine."Needed Quantity");
                         if TempReqLine.Modify(false) then;
@@ -125,6 +126,7 @@ page 71826210 ProjectProdPlanningUAS
                     TempReqLine: Record "Requisition Line" temporary;
                 begin
                     TempReqLine.Copy(Rec, true);
+                    if TempReqLine.FindSet() then;
                     repeat
                         TempReqLine.Validate(Quantity, 0);
                         if TempReqLine.Modify(false) then;
