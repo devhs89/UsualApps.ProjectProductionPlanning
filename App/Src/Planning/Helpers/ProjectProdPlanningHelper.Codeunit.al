@@ -55,4 +55,38 @@ codeunit 71826211 ProjectProdPlanningHelper
         ReqLine.SetRange("User ID", UserId);
         ReqLine.SetRange("Replenishment System", Enum::"Replenishment System"::"Prod. Order");
     end;
+
+    /// <summary>
+    /// Toggles the reserve checkbox on the requisition line records to the specified value.
+    /// </summary>
+    /// <param name="CurrReqLine">The requisition line record to toggle the reserve checkbox for.</param>
+    /// <param name="Resv"> The value to set the reserve checkbox to.</param>
+    internal procedure ProjectProdPlanningHelper__ToggleReserveCheckbox(var CurrReqLine: Record "Requisition Line"; Resv: Boolean)
+    var
+        TempReqLine: Record "Requisition Line" temporary;
+    begin
+        TempReqLine.Copy(CurrReqLine, true);
+        if TempReqLine.FindSet() then;
+        repeat
+            TempReqLine.Validate("Reserve", Resv);
+            if TempReqLine.Modify(false) then;
+        until TempReqLine.Next() = 0;
+    end;
+
+    /// <summary>
+    /// Toggles the quantity of the requisition line records between the needed quantity and zero.
+    /// </summary>
+    /// <param name="CurrReqLine">The requisition line record to toggle the quantity for.</param>
+    /// <param name="ChangeQtyTo">The quantity to change the requisition line records to.</param>
+    internal procedure ProjectProdPlanningHelper__ToggleRequisitionLineQuantity(var CurrReqLine: Record "Requisition Line")
+    var
+        TempReqLine: Record "Requisition Line" temporary;
+    begin
+        TempReqLine.Copy(CurrReqLine, true);
+        if TempReqLine.FindSet() then;
+        repeat
+            TempReqLine.Validate(Quantity, (TempReqLine.Quantity = 0 ? TempReqLine."Needed Quantity" : 0));
+            if TempReqLine.Modify(false) then;
+        until TempReqLine.Next() = 0;
+    end;
 }

@@ -10,6 +10,7 @@ page 71826210 ProjectProdPlanningUAS
     ApplicationArea = Planning;
     PageType = Worksheet;
     InsertAllowed = false;
+    PromotedActionCategories = 'New,Process,Report,Home,Others';
 
     layout
     {
@@ -96,41 +97,34 @@ page 71826210 ProjectProdPlanningUAS
 
     actions
     {
-        area(Navigation)
+        area(Processing)
         {
-            action(AutofillProdQuantitiesUAS)
+            action(ToggleReservationUAS)
             {
-                Caption = 'Autofill Prod. Quantities';
-                ToolTip = 'Autofills the production quantities for all demand lines.';
-                Image = AutofillQtyToHandle;
+                Caption = 'Toggle Reservation';
+                ToolTip = 'Toggles the reserve checkbox on the requisition line records.';
+                Image = LineReserve;
+                Promoted = true;
+                PromotedCategory = Category5;
                 trigger OnAction()
                 var
-                    TempReqLine: Record "Requisition Line" temporary;
+                    Helper: Codeunit ProjectProdPlanningHelper;
                 begin
-                    TempReqLine.Copy(Rec, true);
-                    if TempReqLine.FindSet() then;
-                    repeat
-                        TempReqLine.Validate(Quantity, TempReqLine."Needed Quantity");
-                        if TempReqLine.Modify(false) then;
-                    until TempReqLine.Next() = 0;
+                    Helper.ProjectProdPlanningHelper__ToggleReserveCheckbox(Rec, (not Rec.Reserve));
                 end;
             }
-
-            action(DeleteProdQuantitiesUAS)
+            action(ToggleSupplyQuantitiesUAS)
             {
-                Caption = 'Delete Prod. Quantities';
-                ToolTip = 'Autofills the production quantities for all demand lines.';
-                Image = DeleteQtyToHandle;
+                Caption = 'Toggle Supply Quantities';
+                ToolTip = 'Toggles the quantity of the requisition line records between the needed quantity and zero.';
+                Image = AutofillQtyToHandle;
+                Promoted = true;
+                PromotedCategory = Category5;
                 trigger OnAction()
                 var
-                    TempReqLine: Record "Requisition Line" temporary;
+                    Helper: Codeunit ProjectProdPlanningHelper;
                 begin
-                    TempReqLine.Copy(Rec, true);
-                    if TempReqLine.FindSet() then;
-                    repeat
-                        TempReqLine.Validate(Quantity, 0);
-                        if TempReqLine.Modify(false) then;
-                    until TempReqLine.Next() = 0;
+                    Helper.ProjectProdPlanningHelper__ToggleRequisitionLineQuantity(Rec);
                 end;
             }
         }
