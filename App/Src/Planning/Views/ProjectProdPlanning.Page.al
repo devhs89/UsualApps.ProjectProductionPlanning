@@ -1,6 +1,7 @@
 namespace UsualApps.ProjectProductionPlanning;
 
 using Microsoft.Inventory.Requisition;
+using Microsoft.Projects.Project.Planning;
 
 page 71826210 ProjectProdPlanningUAS
 {
@@ -18,13 +19,28 @@ page 71826210 ProjectProdPlanningUAS
         {
             repeater(Main)
             {
-                field("Demand Date"; Rec."Demand Date")
+                field("Due Date"; Rec."Due Date")
                 {
-                    ToolTip = 'Specifies the date when the demand order line is required.';
+                    ToolTip = 'Specifies the date when the order is due.';
                 }
                 field(Status; Rec.Status)
                 {
                     ToolTip = 'Specifies the status of the demand.';
+                    Visible = false;
+                }
+                field(DemandTaskNo; this.DemandTaskNo)
+                {
+                    Caption = 'Demand Task No.';
+                    ToolTip = 'Specifies the job task number.';
+                }
+                field(DemandLineNo; this.DemandLineNo)
+                {
+                    Caption = 'Demand Line No.';
+                    ToolTip = 'Specifies the job planning line number.';
+                }
+                field("Demand Date"; Rec."Demand Date")
+                {
+                    ToolTip = 'Specifies the date when the demand order line is required.';
                     Visible = false;
                 }
                 field("No."; Rec."No.")
@@ -46,6 +62,7 @@ page 71826210 ProjectProdPlanningUAS
                 field("Bin Code"; Rec."Bin Code")
                 {
                     ToolTip = 'Specifies the bin code.';
+                    Visible = false;
                 }
                 field("Direct Unit Cost"; Rec."Direct Unit Cost")
                 {
@@ -58,6 +75,7 @@ page 71826210 ProjectProdPlanningUAS
                 field("Demand Quantity"; Rec."Demand Quantity")
                 {
                     ToolTip = 'Specifies the demand quantity.';
+                    Visible = false;
                 }
                 field("Demand Qty. Available"; Rec."Demand Qty. Available")
                 {
@@ -74,6 +92,7 @@ page 71826210 ProjectProdPlanningUAS
                 field("Reserved Quantity"; Rec."Reserved Quantity")
                 {
                     ToolTip = 'Specifies the reserved quantity.';
+                    Visible = false;
                 }
                 field("Unit of Measure Code"; Rec."Unit of Measure Code")
                 {
@@ -82,14 +101,11 @@ page 71826210 ProjectProdPlanningUAS
                 field("Unit Of Measure Code (Demand)"; Rec."Unit Of Measure Code (Demand)")
                 {
                     ToolTip = 'Specifies the unit of measure code for the demand quantity.';
+                    Visible = false;
                 }
                 field("Order Date"; Rec."Order Date")
                 {
                     ToolTip = 'Specifies the date when the order was placed.';
-                }
-                field("Due Date"; Rec."Due Date")
-                {
-                    ToolTip = 'Specifies the date when the order is due.';
                 }
             }
         }
@@ -108,7 +124,7 @@ page 71826210 ProjectProdPlanningUAS
                 PromotedCategory = Category5;
                 trigger OnAction()
                 var
-                    Helper: Codeunit ProjectProdPlanningHelper;
+                    Helper: Codeunit ProjectProdPlanningHelperUAS;
                 begin
                     Helper.ProjectProdPlanningHelper__ToggleReserveCheckbox(Rec);
                 end;
@@ -122,13 +138,42 @@ page 71826210 ProjectProdPlanningUAS
                 PromotedCategory = Category5;
                 trigger OnAction()
                 var
-                    Helper: Codeunit ProjectProdPlanningHelper;
+                    Helper: Codeunit ProjectProdPlanningHelperUAS;
                 begin
                     Helper.ProjectProdPlanningHelper__ToggleRequisitionLineQuantity(Rec);
                 end;
             }
         }
     }
+
+    var
+        DemandTaskNo: Code[20];
+        DemandLineNo: Integer;
+
+    trigger OnAfterGetRecord()
+    begin
+        this.SetJobDetails();
+    end;
+
+    trigger OnAfterGetCurrRecord()
+    begin
+        this.SetJobDetails();
+    end;
+
+    /// <summary>
+    /// Sets the job task number and job planning line number for the current record based on the demand order number and demand line number.
+    /// </summary>
+    internal procedure SetJobDetails()
+    var
+        JobPlanLine: Record "Job Planning Line";
+    begin
+        JobPlanLine.SetCurrentKey("Job No.", "Job Contract Entry No.");
+        JobPlanLine.SetRange("Job No.", Rec."Demand Order No.");
+        JobPlanLine.SetRange("Job Contract Entry No.", Rec."Demand Line No.");
+        if not JobPlanLine.FindFirst() then exit;
+        this.DemandTaskNo := JobPlanLine."Job Task No.";
+        this.DemandLineNo := JobPlanLine."Line No.";
+    end;
 
     /// <summary>
     /// Copies the records from the temporary requisition line table to the page's source table.

@@ -5,7 +5,7 @@ using Microsoft.Inventory.Planning;
 using Microsoft.Inventory.Requisition;
 using Microsoft.Projects.Project.Job;
 
-codeunit 71826211 ProjectProdPlanningHelper
+codeunit 71826211 ProjectProdPlanningHelperUAS
 {
     /// <summary>
     /// Sets the custom filter group on the unplanned demand record to filter for job planning line origin type.

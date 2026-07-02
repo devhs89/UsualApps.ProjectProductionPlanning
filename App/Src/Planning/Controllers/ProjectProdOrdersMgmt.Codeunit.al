@@ -4,41 +4,54 @@ using Microsoft.Foundation.Navigate;
 using Microsoft.Inventory.Requisition;
 using Microsoft.Manufacturing.Document;
 
-codeunit 71826212 ProjectProdOrdersMgmt
+codeunit 71826212 ProjectProdOrdersMgmtUAS
 {
     TableNo = "Requisition Line";
 
     trigger OnRun()
     var
         TempReqLine: Record "Requisition Line" temporary;
+        TempDocumentEntry: Record "Document Entry" temporary;
         CerryAction: Codeunit "Carry Out Action";
         MfgAction: Codeunit "Mfg. Carry Out Action";
-    begin
-        TempReqLine.Copy(Rec, true);
-        if TempReqLine.FindSet() then;
-        repeat
-            if MfgAction.CarryOutActionsFromProdOrder(TempReqLine, this.ProdOrderChoice, this.ProdWkshTempl, this.ProdWkshName, this.TempDocumentEntry, CerryAction) then Message('Success');
-        until TempReqLine.Next() = 0;
-    end;
-
-    var
-        TempDocumentEntry: Record "Document Entry" temporary;
         ProdOrderChoice: Enum "Planning Create Prod. Order";
         ProdWkshTempl: Code[10];
         ProdWkshName: Code[10];
-
-    internal procedure ProjectProdOrdersMgmt__SetProductionOrderStatus(ProdStatus: Enum "Production Order Status")
     begin
-        this.ProdOrderChoice := ProdStatus
+        this.ProjectProdOrdersMgmt__GetRequisitionLines(TempReqLine, Rec);
+        ProdOrderChoice := Enum::"Production Order Status"::"Firm Planned";
+        Clear(ProdWkshTempl);
+        Clear(ProdWkshName);
+        this.OnAfterSetMfgCarrryOutActionFromProdOrderParameters(TempReqLine, ProdOrderChoice, ProdWkshTempl, ProdWkshName, TempDocumentEntry);
+
+        repeat
+            if MfgAction.CarryOutActionsFromProdOrder(TempReqLine, ProdOrderChoice, ProdWkshTempl, ProdWkshName, TempDocumentEntry, CerryAction) then Message('Success');
+        until TempReqLine.Next() = 0;
     end;
 
-    internal procedure ProjectProdOrdersMgmt__SetProductionTemplateName(TemplateName: Code[10])
+    /// <summary>
+    /// Get the requisition lines from the passed temporary table and copy them to local temporary table.
+    /// </summary>
+    /// <param name="TempReqLine">The temporary requisition line record containing the records to copy.</param>
+    /// <param name="ExtReqLine">The external requisition line record to copy from.</param>
+    local procedure ProjectProdOrdersMgmt__GetRequisitionLines(var TempReqLine: Record "Requisition Line"; var ExtReqLine: Record "Requisition Line")
     begin
-        this.ProdWkshTempl := TemplateName;
+        Clear(TempReqLine);
+        TempReqLine.Copy(ExtReqLine, true);
+        TempReqLine.SetFilter(Quantity, '<>0');
+        if TempReqLine.FindSet() then;
     end;
 
-    internal procedure ProjectProdOrdersMgmt__SetProductionWorksheetName(WorksheetName: Code[10])
+    /// <summary>
+    /// Event raised after the parameters for the Mfg. Carry Out Action from Prod Order are set.
+    /// </summary>
+    /// <param name="ReqLine">The requisition line record.</param>
+    /// <param name="ProdOrderChoice">The production order choice enum value.</param>
+    /// <param name="ProdWkshTempl">The production worksheet template code.</param>
+    /// <param name="ProdWkshName">The production worksheet name code.</param>
+    /// <param name="DocumentEntry"> The document entry record.</param>
+    [IntegrationEvent(false, false)]
+    local procedure OnAfterSetMfgCarrryOutActionFromProdOrderParameters(var ReqLine: Record "Requisition Line"; ProdOrderChoice: Enum "Planning Create Prod. Order"; ProdWkshTempl: Code[10]; ProdWkshName: Code[10]; var DocumentEntry: Record "Document Entry")
     begin
-        this.ProdWkshName := WorksheetName;
     end;
 }
