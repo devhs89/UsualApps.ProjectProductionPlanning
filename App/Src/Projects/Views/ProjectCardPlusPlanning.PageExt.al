@@ -3,6 +3,7 @@ namespace UsualApps.ProjectProductionPlanning;
 using Microsoft.Inventory.Planning;
 using Microsoft.Inventory.Requisition;
 using Microsoft.Projects.Project.Job;
+using Microsoft.Inventory.Item;
 
 pageextension 71826210 ProjectCardPlusPlanningUAS extends "Job Card"
 {
@@ -32,6 +33,7 @@ pageextension 71826210 ProjectCardPlusPlanningUAS extends "Job Card"
                     Helper.ProjectProdPlanningHelper__TransferUnplannedDemandToRequisitionLine(TempReqLine, TempUnplanDemand);
 
                     Helper.ProjectProdPlanningHelper__SetReqLineFiltersToProdOrder(TempReqLine);
+                    Helper.ProjectProdPlanningHelper__SetReqLineFiltersFromUnplannedDemand(TempReqLine, TempUnplanDemand, 187);
 
                     PlanningPage.LookupMode(true);
                     PlanningPage.CopyRecords(TempReqLine);

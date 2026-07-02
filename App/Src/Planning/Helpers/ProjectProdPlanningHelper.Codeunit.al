@@ -53,7 +53,29 @@ codeunit 71826211 ProjectProdPlanningHelperUAS
         ReqLine.Reset();
         ReqLine.SetRange("Worksheet Template Name", '');
         ReqLine.SetRange("User ID", UserId);
-        ReqLine.SetRange("Replenishment System", Enum::"Replenishment System"::"Prod. Order");
+        ReqLine.SetRange("Replenishment System", ReqLine."Replenishment System"::"Prod. Order");
+    end;
+
+    /// <summary>
+    /// Sets the filters on the requisition line record based on the unplanned demand record, using the specified filter group.
+    /// </summary>
+    /// <param name="ReqLine">The requisition line record to set the filters on.</param>
+    /// <param name="UnplanDemand">The unplanned demand record to use for filtering.</param>
+    /// <param name="FilterGrp">The filter group to use for setting the filters.</param>
+    internal procedure ProjectProdPlanningHelper__SetReqLineFiltersFromUnplannedDemand(var ReqLine: Record "Requisition Line"; var UnplanDemand: Record "Unplanned Demand"; FilterGrp: Integer)
+    var
+        DemandType: Integer;
+        DemandNo: Code[20];
+    begin
+        ReqLine.Reset();
+        ReqLine.FilterGroup(FilterGrp);
+        this.ProjectProdPlanningHelper__SetReqLineFiltersToProdOrder(ReqLine);
+
+        if Evaluate(DemandType, UnplanDemand.GetFilter("Demand Type")) then ReqLine.SetRange("Demand Type", DemandType);
+        if Evaluate(DemandNo, UnplanDemand.GetFilter("Demand Order No.")) then ReqLine.SetRange("Demand Order No.", DemandNo);
+        if UnplanDemand.GetFilter(PlanningOriginUAS) = Format(ReqLine."Planning Line Origin"::JobPlanningLinesUAS) then
+            ReqLine.SetRange("Planning Line Origin", ReqLine."Planning Line Origin"::JobPlanningLinesUAS);
+        ReqLine.FilterGroup(0);
     end;
 
     /// <summary>
