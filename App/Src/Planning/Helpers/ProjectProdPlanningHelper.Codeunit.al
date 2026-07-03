@@ -1,6 +1,7 @@
 namespace UsualApps.ProjectProductionPlanning;
 
 using Microsoft.Inventory.Item;
+using Microsoft.Projects.Project.Planning;
 using Microsoft.Inventory.Planning;
 using Microsoft.Inventory.Requisition;
 using Microsoft.Projects.Project.Job;
@@ -64,17 +65,18 @@ codeunit 71826211 ProjectProdPlanningHelperUAS
     /// <param name="FilterGrp">The filter group to use for setting the filters.</param>
     internal procedure ProjectProdPlanningHelper__SetReqLineFiltersFromUnplannedDemand(var ReqLine: Record "Requisition Line"; var UnplanDemand: Record "Unplanned Demand"; FilterGrp: Integer)
     var
-        DemandType: Integer;
         DemandNo: Code[20];
     begin
         ReqLine.Reset();
         ReqLine.FilterGroup(FilterGrp);
         this.ProjectProdPlanningHelper__SetReqLineFiltersToProdOrder(ReqLine);
 
-        if Evaluate(DemandType, UnplanDemand.GetFilter("Demand Type")) then ReqLine.SetRange("Demand Type", DemandType);
-        if Evaluate(DemandNo, UnplanDemand.GetFilter("Demand Order No.")) then ReqLine.SetRange("Demand Order No.", DemandNo);
         if UnplanDemand.GetFilter(PlanningOriginUAS) = Format(ReqLine."Planning Line Origin"::JobPlanningLinesUAS) then
             ReqLine.SetRange("Planning Line Origin", ReqLine."Planning Line Origin"::JobPlanningLinesUAS);
+        if UnplanDemand.GetFilter("Demand Type") = Format(UnplanDemand."Demand Type"::Job) then
+            ReqLine.SetRange("Demand Type", Database::"Job Planning Line");
+        if Evaluate(DemandNo, UnplanDemand.GetFilter("Demand Order No.")) then
+            ReqLine.SetRange("Demand Order No.", DemandNo);
         ReqLine.FilterGroup(0);
     end;
 

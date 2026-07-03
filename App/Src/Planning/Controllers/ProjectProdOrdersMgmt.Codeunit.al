@@ -17,6 +17,9 @@ codeunit 71826212 ProjectProdOrdersMgmtUAS
         ProdOrderChoice: Enum "Planning Create Prod. Order";
         ProdWkshTempl: Code[10];
         ProdWkshName: Code[10];
+        PordOrderCreated: TextBuilder;
+        Dex: Integer;
+        Count: Integer;
     begin
         this.ProjectProdOrdersMgmt__GetRequisitionLines(TempReqLine, Rec);
         ProdOrderChoice := Enum::"Production Order Status"::"Firm Planned";
@@ -24,9 +27,17 @@ codeunit 71826212 ProjectProdOrdersMgmtUAS
         Clear(ProdWkshName);
         this.OnAfterSetMfgCarrryOutActionFromProdOrderParameters(TempReqLine, ProdOrderChoice, ProdWkshTempl, ProdWkshName, TempDocumentEntry);
 
+        Dex := 1;
         repeat
-            if MfgAction.CarryOutActionsFromProdOrder(TempReqLine, ProdOrderChoice, ProdWkshTempl, ProdWkshName, TempDocumentEntry, CerryAction) then Message('Success');
+            Dex += 1;
+            if MfgAction.CarryOutActionsFromProdOrder(TempReqLine, ProdOrderChoice, ProdWkshTempl, ProdWkshName, TempDocumentEntry, CerryAction) then begin
+                PordOrderCreated.Append(TempDocumentEntry."Document No.");
+                if Dex < TempReqLine.Count() then PordOrderCreated.Append(', ');
+                Count += 1;
+            end;
         until TempReqLine.Next() = 0;
+
+        Message('%1 production order(s) created: %2', Count, PordOrderCreated);
     end;
 
     /// <summary>
@@ -34,7 +45,11 @@ codeunit 71826212 ProjectProdOrdersMgmtUAS
     /// </summary>
     /// <param name="TempReqLine">The temporary requisition line record containing the records to copy.</param>
     /// <param name="ExtReqLine">The external requisition line record to copy from.</param>
-    local procedure ProjectProdOrdersMgmt__GetRequisitionLines(var TempReqLine: Record "Requisition Line"; var ExtReqLine: Record "Requisition Line")
+    local procedure ProjectProdOrdersMgmt__GetRequisitionLines(var
+                                                                   TempReqLine: Record "Requisition Line";
+
+var
+ExtReqLine: Record "Requisition Line")
     begin
         Clear(TempReqLine);
         TempReqLine.Copy(ExtReqLine, true);
@@ -51,7 +66,8 @@ codeunit 71826212 ProjectProdOrdersMgmtUAS
     /// <param name="ProdWkshName">The production worksheet name code.</param>
     /// <param name="DocumentEntry"> The document entry record.</param>
     [IntegrationEvent(false, false)]
-    local procedure OnAfterSetMfgCarrryOutActionFromProdOrderParameters(var ReqLine: Record "Requisition Line"; ProdOrderChoice: Enum "Planning Create Prod. Order"; ProdWkshTempl: Code[10]; ProdWkshName: Code[10]; var DocumentEntry: Record "Document Entry")
+    local procedure OnAfterSetMfgCarrryOutActionFromProdOrderParameters(var ReqLine: Record "Requisition Line"; ProdOrderChoice: Enum "Planning Create Prod. Order"; ProdWkshTempl: Code[10];
+                                                                                                                                     ProdWkshName: Code[10]; var DocumentEntry: Record "Document Entry")
     begin
     end;
 }

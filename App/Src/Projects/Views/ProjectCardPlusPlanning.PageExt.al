@@ -33,11 +33,12 @@ pageextension 71826210 ProjectCardPlusPlanningUAS extends "Job Card"
                     Helper.ProjectProdPlanningHelper__TransferUnplannedDemandToRequisitionLine(TempReqLine, TempUnplanDemand);
 
                     Helper.ProjectProdPlanningHelper__SetReqLineFiltersToProdOrder(TempReqLine);
-                    Helper.ProjectProdPlanningHelper__SetReqLineFiltersFromUnplannedDemand(TempReqLine, TempUnplanDemand, 187);
 
                     PlanningPage.LookupMode(true);
                     PlanningPage.CopyRecords(TempReqLine);
                     if PlanningPage.RunModal() <> Action::LookupOK then exit;
+
+                    Helper.ProjectProdPlanningHelper__SetReqLineFiltersFromUnplannedDemand(TempReqLine, TempUnplanDemand, 187);
                     ProjProdMgmt.Run(TempReqLine);
                 end;
             }
