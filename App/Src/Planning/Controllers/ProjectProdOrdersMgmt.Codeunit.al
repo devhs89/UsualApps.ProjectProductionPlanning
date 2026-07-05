@@ -17,27 +17,18 @@ codeunit 71826212 ProjectProdOrdersMgmtUAS
         ProdOrderChoice: Enum "Planning Create Prod. Order";
         ProdWkshTempl: Code[10];
         ProdWkshName: Code[10];
-        PordOrderCreated: TextBuilder;
-        Dex: Integer;
-        Count: Integer;
     begin
         this.ProjectProdOrdersMgmt__GetRequisitionLines(TempReqLine, Rec);
         ProdOrderChoice := Enum::"Production Order Status"::"Firm Planned";
         Clear(ProdWkshTempl);
         Clear(ProdWkshName);
-        this.OnAfterSetMfgCarrryOutActionFromProdOrderParameters(TempReqLine, ProdOrderChoice, ProdWkshTempl, ProdWkshName, TempDocumentEntry);
+        this.OnAfterSetMfgCarrryOutActionFromProdOrderParameters(TempReqLine, ProdOrderChoice, ProdWkshTempl, ProdWkshName);
 
-        Dex := 1;
         repeat
-            Dex += 1;
-            if MfgAction.CarryOutActionsFromProdOrder(TempReqLine, ProdOrderChoice, ProdWkshTempl, ProdWkshName, TempDocumentEntry, CerryAction) then begin
-                PordOrderCreated.Append(TempDocumentEntry."Document No.");
-                if Dex < TempReqLine.Count() then PordOrderCreated.Append(', ');
-                Count += 1;
-            end;
+            if MfgAction.CarryOutActionsFromProdOrder(TempReqLine, ProdOrderChoice, ProdWkshTempl, ProdWkshName, TempDocumentEntry, CerryAction) then;
         until TempReqLine.Next() = 0;
 
-        Message('%1 production order(s) created: %2', Count, PordOrderCreated);
+        Message('%1 production order(s) created.', TempDocumentEntry.Count());
     end;
 
     /// <summary>
@@ -64,10 +55,8 @@ ExtReqLine: Record "Requisition Line")
     /// <param name="ProdOrderChoice">The production order choice enum value.</param>
     /// <param name="ProdWkshTempl">The production worksheet template code.</param>
     /// <param name="ProdWkshName">The production worksheet name code.</param>
-    /// <param name="DocumentEntry"> The document entry record.</param>
     [IntegrationEvent(false, false)]
-    local procedure OnAfterSetMfgCarrryOutActionFromProdOrderParameters(var ReqLine: Record "Requisition Line"; ProdOrderChoice: Enum "Planning Create Prod. Order"; ProdWkshTempl: Code[10];
-                                                                                                                                     ProdWkshName: Code[10]; var DocumentEntry: Record "Document Entry")
+    local procedure OnAfterSetMfgCarrryOutActionFromProdOrderParameters(var ReqLine: Record "Requisition Line"; ProdOrderChoice: Enum "Planning Create Prod. Order"; ProdWkshTempl: Code[10]; ProdWkshName: Code[10])
     begin
     end;
 }

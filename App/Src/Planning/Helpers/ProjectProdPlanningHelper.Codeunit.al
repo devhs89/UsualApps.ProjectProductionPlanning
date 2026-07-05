@@ -1,10 +1,10 @@
 namespace UsualApps.ProjectProductionPlanning;
 
 using Microsoft.Inventory.Item;
-using Microsoft.Projects.Project.Planning;
 using Microsoft.Inventory.Planning;
 using Microsoft.Inventory.Requisition;
 using Microsoft.Projects.Project.Job;
+using Microsoft.Projects.Project.Planning;
 
 codeunit 71826211 ProjectProdPlanningHelperUAS
 {
