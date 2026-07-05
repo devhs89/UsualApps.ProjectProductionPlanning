@@ -35,14 +35,16 @@ codeunit 71826211 ProjectProdPlanningHelperUAS
     /// <param name="UnplanDemand">The unplanned demand record to transfer from.</param>
     internal procedure ProjectProdPlanningHelper__TransferUnplannedDemandToRequisitionLine(var ReqLine: Record "Requisition Line"; var UnplanDemand: Record "Unplanned Demand")
     begin
-        if UnplanDemand.FindSet() then;
-        repeat
-            ReqLine.TransferFromUnplannedDemand(UnplanDemand);
-            ReqLine.SetSupplyQty(UnplanDemand."Quantity (Base)", UnplanDemand."Needed Qty. (Base)");
-            ReqLine.SetSupplyDates(UnplanDemand."Demand Date");
-            if not ReqLine.Insert() then Error('Failed to insert Requisition Line for Item %1', UnplanDemand."Item No.");
-        until UnplanDemand.Next() = 0;
-        Commit();
+        UnplanDemand.Reset();
+        if UnplanDemand.FindSet(false) then
+            repeat
+                if UnplanDemand."Item No." = '' then continue;
+                Message(UnplanDemand."Item No.");
+                ReqLine.TransferFromUnplannedDemand(UnplanDemand);
+                ReqLine.SetSupplyQty(UnplanDemand."Quantity (Base)", UnplanDemand."Needed Qty. (Base)");
+                ReqLine.SetSupplyDates(UnplanDemand."Demand Date");
+                if not ReqLine.Insert() then Error('Failed to insert Requisition Line %1 for Item %2', ReqLine."Line No.", ReqLine."No.") else Commit();
+            until UnplanDemand.Next() = 0;
     end;
 
     /// <summary>

@@ -176,11 +176,31 @@ page 71826210 ProjectProdPlanningUAS
     end;
 
     /// <summary>
-    /// Copies the records from the temporary requisition line table to the page's source table.
+    /// Copies the records from the requisition line table to the page's source table.
     /// </summary>
-    /// <param name="TempReqLine">The temporary requisition line record containing the records to copy.</param>
-    internal procedure CopyRecords(var TempReqLine: Record "Requisition Line" temporary)
+    /// <param name="ReqLine">The requisition line record containing the records to copy.</param>
+    internal procedure SetReqLinesOnTemporarySource(var ReqLine: Record "Requisition Line")
     begin
-        Rec.Copy(TempReqLine, true);
+        repeat
+            Rec.Copy(ReqLine);
+            if not Rec.Insert(false) then Error('Failed to insert requisition line record with key %1.', Rec."No.");
+        until ReqLine.Next() = 0;
+        Commit();
+    end;
+
+    /// <summary>
+    /// Copies the records from the page's source table to the requisition line table.
+    /// </summary>
+    /// <param name="ReqLine">The requisition line record to copy the records to.</param>
+    internal procedure GetReqLinesFromTemporarySource(var ReqLine: Record "Requisition Line")
+    var
+        TempReqLine: Record "Requisition Line" temporary;
+    begin
+        TempReqLine.Copy(Rec);
+        repeat
+            Clear(ReqLine);
+            ReqLine.Copy(TempReqLine);
+            if not ReqLine.Modify(true) then Error('Failed to update requisition line record with key %1.', ReqLine."No.");
+        until TempReqLine.Next() = 0;
     end;
 }

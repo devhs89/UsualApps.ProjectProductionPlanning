@@ -10,7 +10,7 @@ codeunit 71826212 ProjectProdOrdersMgmtUAS
 
     trigger OnRun()
     var
-        TempReqLine: Record "Requisition Line" temporary;
+        ReqLine: Record "Requisition Line";
         TempDocumentEntry: Record "Document Entry" temporary;
         CerryAction: Codeunit "Carry Out Action";
         MfgAction: Codeunit "Mfg. Carry Out Action";
@@ -18,34 +18,30 @@ codeunit 71826212 ProjectProdOrdersMgmtUAS
         ProdWkshTempl: Code[10];
         ProdWkshName: Code[10];
     begin
-        this.ProjectProdOrdersMgmt__GetRequisitionLines(TempReqLine, Rec);
+        this.ProjectProdOrdersMgmt__GetRequisitionLines(ReqLine, Rec);
         ProdOrderChoice := Enum::"Production Order Status"::"Firm Planned";
         Clear(ProdWkshTempl);
         Clear(ProdWkshName);
-        this.OnAfterSetMfgCarrryOutActionFromProdOrderParameters(TempReqLine, ProdOrderChoice, ProdWkshTempl, ProdWkshName);
+        this.OnAfterSetMfgCarrryOutActionFromProdOrderParameters(ReqLine, ProdOrderChoice, ProdWkshTempl, ProdWkshName);
 
         repeat
-            if MfgAction.CarryOutActionsFromProdOrder(TempReqLine, ProdOrderChoice, ProdWkshTempl, ProdWkshName, TempDocumentEntry, CerryAction) then;
-        until TempReqLine.Next() = 0;
+            if MfgAction.CarryOutActionsFromProdOrder(ReqLine, ProdOrderChoice, ProdWkshTempl, ProdWkshName, TempDocumentEntry, CerryAction) then ReqLine.Delete(true);
+        until ReqLine.Next() = 0;
 
         Message('%1 production order(s) created.', TempDocumentEntry.Count());
     end;
 
     /// <summary>
-    /// Get the requisition lines from the passed temporary table and copy them to local temporary table.
+    /// Get the requisition lines from the passed table and copy them to local table.
     /// </summary>
-    /// <param name="TempReqLine">The temporary requisition line record containing the records to copy.</param>
+    /// <param name="ReqLine">The requisition line record containing the records to copy.</param>
     /// <param name="ExtReqLine">The external requisition line record to copy from.</param>
-    local procedure ProjectProdOrdersMgmt__GetRequisitionLines(var
-                                                                   TempReqLine: Record "Requisition Line";
-
-var
-ExtReqLine: Record "Requisition Line")
+    local procedure ProjectProdOrdersMgmt__GetRequisitionLines(var ReqLine: Record "Requisition Line"; var ExtReqLine: Record "Requisition Line")
     begin
-        Clear(TempReqLine);
-        TempReqLine.Copy(ExtReqLine, true);
-        TempReqLine.SetFilter(Quantity, '<>0');
-        if TempReqLine.FindSet() then;
+        Clear(ReqLine);
+        ReqLine.Copy(ExtReqLine, true);
+        ReqLine.SetFilter(Quantity, '<>0');
+        if ReqLine.FindSet() then;
     end;
 
     /// <summary>
