@@ -39,11 +39,11 @@ codeunit 71826211 ProjectProdPlanningHelperUAS
         if UnplanDemand.FindSet(false) then
             repeat
                 if UnplanDemand."Item No." = '' then continue;
-                Message(UnplanDemand."Item No.");
                 ReqLine.TransferFromUnplannedDemand(UnplanDemand);
                 ReqLine.SetSupplyQty(UnplanDemand."Quantity (Base)", UnplanDemand."Needed Qty. (Base)");
                 ReqLine.SetSupplyDates(UnplanDemand."Demand Date");
-                if not ReqLine.Insert() then Error('Failed to insert Requisition Line %1 for Item %2', ReqLine."Line No.", ReqLine."No.") else Commit();
+                ReqLine."Planning Line Origin" := ReqLine."Planning Line Origin"::JobPlanningLinesUAS;
+                if not ReqLine.Insert(false) then Error('Failed to insert Requisition Line %1 for Item %2', ReqLine."Line No.", ReqLine."No.") else Commit();
             until UnplanDemand.Next() = 0;
     end;
 
@@ -54,8 +54,10 @@ codeunit 71826211 ProjectProdPlanningHelperUAS
     internal procedure ProjectProdPlanningHelper__SetReqLineFiltersToProdOrder(var ReqLine: Record "Requisition Line")
     begin
         ReqLine.Reset();
-        ReqLine.SetRange("Worksheet Template Name", '');
+        ReqLine.Init();
+        ReqLine.GetJnlBatchNameForOrderPlanning();
         ReqLine.SetRange("User ID", UserId);
+        ReqLine.SetRange("Planning Line Origin", "Planning Line Origin Type"::JobPlanningLinesUAS);
         ReqLine.SetRange("Replenishment System", ReqLine."Replenishment System"::"Prod. Order");
     end;
 
@@ -69,12 +71,11 @@ codeunit 71826211 ProjectProdPlanningHelperUAS
     var
         DemandNo: Code[20];
     begin
+        if UnplanDemand.GetFilter(PlanningOriginUAS) <> Format(UnplanDemand.PlanningOriginUAS::JobPlanningLinesUAS) then Error('Demand did not originate from a Job Planning Line.');
         ReqLine.Reset();
         ReqLine.FilterGroup(FilterGrp);
         this.ProjectProdPlanningHelper__SetReqLineFiltersToProdOrder(ReqLine);
 
-        if UnplanDemand.GetFilter(PlanningOriginUAS) = Format(ReqLine."Planning Line Origin"::JobPlanningLinesUAS) then
-            ReqLine.SetRange("Planning Line Origin", ReqLine."Planning Line Origin"::JobPlanningLinesUAS);
         if UnplanDemand.GetFilter("Demand Type") = Format(UnplanDemand."Demand Type"::Job) then
             ReqLine.SetRange("Demand Type", Database::"Job Planning Line");
         if Evaluate(DemandNo, UnplanDemand.GetFilter("Demand Order No.")) then
@@ -94,7 +95,9 @@ codeunit 71826211 ProjectProdPlanningHelperUAS
         TempReqLine.Copy(CurrReqLine, true);
         if TempReqLine.FindSet(true) then;
         repeat
+            TempReqLine."Planning Line Origin" := TempReqLine."Planning Line Origin"::"Order Planning";
             TempReqLine.Validate("Reserve", (not TempReqLine.Reserve));
+            TempReqLine."Planning Line Origin" := TempReqLine."Planning Line Origin"::JobPlanningLinesUAS;
             if TempReqLine.Modify(false) then;
         until TempReqLine.Next() = 0;
     end;

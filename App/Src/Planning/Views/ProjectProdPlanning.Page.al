@@ -113,6 +113,19 @@ page 71826210 ProjectProdPlanningUAS
 
     actions
     {
+        area(Creation)
+        {
+            action(DeleteLine)
+            {
+                Caption = 'Delete Line';
+                ToolTip = 'Deletes the selected line from the list.';
+                Image = DeleteRow;
+                trigger OnAction()
+                begin
+                    this.DeleteRecord(Rec);
+                end;
+            }
+        }
         area(Processing)
         {
             action(ToggleReservationUAS)
@@ -179,28 +192,28 @@ page 71826210 ProjectProdPlanningUAS
     /// Copies the records from the requisition line table to the page's source table.
     /// </summary>
     /// <param name="ReqLine">The requisition line record containing the records to copy.</param>
-    internal procedure SetReqLinesOnTemporarySource(var ReqLine: Record "Requisition Line")
+    /// <param name="ShareTempTable">Indicates whether to share the temporary table.</param>
+    internal procedure SetReqLinesOnTemporarySource(var ReqLine: Record "Requisition Line"; ShareTempTable: Boolean)
     begin
-        repeat
-            Rec.Copy(ReqLine);
-            if not Rec.Insert(false) then Error('Failed to insert requisition line record with key %1.', Rec."No.");
-        until ReqLine.Next() = 0;
-        Commit();
+        Clear(Rec);
+        Rec.Copy(ReqLine, ShareTempTable);
     end;
 
-    /// <summary>
-    /// Copies the records from the page's source table to the requisition line table.
-    /// </summary>
-    /// <param name="ReqLine">The requisition line record to copy the records to.</param>
-    internal procedure GetReqLinesFromTemporarySource(var ReqLine: Record "Requisition Line")
+    local procedure DeleteRecord(CurrReqLine: Record "Requisition Line")
     var
-        TempReqLine: Record "Requisition Line" temporary;
+        ReqLine: Record "Requisition Line";
     begin
-        TempReqLine.Copy(Rec);
-        repeat
-            Clear(ReqLine);
-            ReqLine.Copy(TempReqLine);
-            if not ReqLine.Modify(true) then Error('Failed to update requisition line record with key %1.', ReqLine."No.");
-        until TempReqLine.Next() = 0;
+        Clear(ReqLine);
+        ReqLine.Copy(CurrReqLine);
+        ReqLine.SetCurrentKey("User ID", "Demand Type", "Worksheet Template Name", "Journal Batch Name", "Line No.", Type, "No.");
+        ReqLine.SetRecFilter();
+        if ReqLine.Count() > 0 then ReqLine.Delete(true) else Clear(CurrReqLine);
+    end;
+
+    trigger OnDeleteRecord(): Boolean
+    begin
+        Rec.Delete(false);
+        CurrPage.Update(false);
+        exit(false);
     end;
 }

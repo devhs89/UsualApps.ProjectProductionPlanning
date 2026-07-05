@@ -10,23 +10,31 @@ codeunit 71826212 ProjectProdOrdersMgmtUAS
 
     trigger OnRun()
     var
-        ReqLine: Record "Requisition Line";
+        TempReqLine: Record "Requisition Line" temporary;
         TempDocumentEntry: Record "Document Entry" temporary;
-        CerryAction: Codeunit "Carry Out Action";
+        PersistReqLine: Record "Requisition Line";
+        CarryAction: Codeunit "Carry Out Action";
         MfgAction: Codeunit "Mfg. Carry Out Action";
         ProdOrderChoice: Enum "Planning Create Prod. Order";
         ProdWkshTempl: Code[10];
         ProdWkshName: Code[10];
     begin
-        this.ProjectProdOrdersMgmt__GetRequisitionLines(ReqLine, Rec);
+        this.ProjectProdOrdersMgmt__GetRequisitionLines(TempReqLine, Rec, true);
         ProdOrderChoice := Enum::"Production Order Status"::"Firm Planned";
         Clear(ProdWkshTempl);
         Clear(ProdWkshName);
-        this.OnAfterSetMfgCarrryOutActionFromProdOrderParameters(ReqLine, ProdOrderChoice, ProdWkshTempl, ProdWkshName);
+        Clear(TempDocumentEntry);
+        this.OnAfterSetMfgCarrryOutActionFromProdOrderParameters(TempReqLine, ProdOrderChoice, ProdWkshTempl, ProdWkshName);
 
+        PersistReqLine.Reset();
+        PersistReqLine.SetCurrentKey("User ID", "Demand Type", "Worksheet Template Name", "Journal Batch Name", "Line No.", Type, "No.");
         repeat
-            if MfgAction.CarryOutActionsFromProdOrder(ReqLine, ProdOrderChoice, ProdWkshTempl, ProdWkshName, TempDocumentEntry, CerryAction) then ReqLine.Delete(true);
-        until ReqLine.Next() = 0;
+            if MfgAction.CarryOutActionsFromProdOrder(TempReqLine, ProdOrderChoice, ProdWkshTempl, ProdWkshName, TempDocumentEntry, CarryAction) then begin
+                Clear(PersistReqLine);
+                PersistReqLine.SetRecFilter();
+                if PersistReqLine.Count() > 0 then PersistReqLine.Delete(true);
+            end;
+        until TempReqLine.Next() = 0;
 
         Message('%1 production order(s) created.', TempDocumentEntry.Count());
     end;
@@ -36,10 +44,11 @@ codeunit 71826212 ProjectProdOrdersMgmtUAS
     /// </summary>
     /// <param name="ReqLine">The requisition line record containing the records to copy.</param>
     /// <param name="ExtReqLine">The external requisition line record to copy from.</param>
-    local procedure ProjectProdOrdersMgmt__GetRequisitionLines(var ReqLine: Record "Requisition Line"; var ExtReqLine: Record "Requisition Line")
+    local procedure ProjectProdOrdersMgmt__GetRequisitionLines(var ReqLine: Record "Requisition Line"; var ExtReqLine: Record "Requisition Line"; ShareTempTable: Boolean)
     begin
         Clear(ReqLine);
-        ReqLine.Copy(ExtReqLine, true);
+        ReqLine.Copy(ExtReqLine, ShareTempTable);
+        ReqLine.SetFilter("No.", '<>''''');
         ReqLine.SetFilter(Quantity, '<>0');
         if ReqLine.FindSet() then;
     end;
