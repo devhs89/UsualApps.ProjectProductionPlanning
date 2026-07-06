@@ -2,8 +2,8 @@ namespace UsualApps.ProjectProductionPlanning;
 
 using Microsoft.Inventory.Planning;
 using Microsoft.Inventory.Requisition;
+using Microsoft.Projects.Project.Planning;
 using Microsoft.Projects.Project.Job;
-using Microsoft.Inventory.Item;
 
 pageextension 71826210 ProjectCardPlusPlanningUAS extends "Job Card"
 {
@@ -19,26 +19,30 @@ pageextension 71826210 ProjectCardPlusPlanningUAS extends "Job Card"
                 ApplicationArea = Jobs;
                 trigger OnAction()
                 var
-                    TempReqLine: Record "Requisition Line" temporary;
                     TempUnplanDemand: Record "Unplanned Demand" temporary;
+                    TempReqLine: Record "Requisition Line" temporary;
                     GetUnplannedDemand: Codeunit "Get Unplanned Demand";
                     ProjProdMgmt: Codeunit ProjectProdOrdersMgmtUAS;
                     Helper: Codeunit ProjectProdPlanningHelperUAS;
                     PlanningPage: Page ProjectProdPlanningUAS;
                 begin
-                    Helper.ProjectProdPlanningHelper__SetJobPlanningCustomFilterGroup(TempUnplanDemand, Rec);
+                    Clear(TempUnplanDemand);
+                    Helper.ProjectProdPlanningHelper__SetDefaultJobPlanningFilterGroup(TempUnplanDemand, Rec, 187);
                     GetUnplannedDemand.Run(TempUnplanDemand);
 
-                    Clear(TempReqLine);
-                    Helper.ProjectProdPlanningHelper__TransferUnplannedDemandToRequisitionLine(TempReqLine, TempUnplanDemand);
+                    TempUnplanDemand.Reset();
+                    Helper.ProjectProdPlanningHelper__SetDefaultJobPlanningFilterGroup(TempUnplanDemand, Rec, 187);
 
-                    Helper.ProjectProdPlanningHelper__SetReqLineFiltersToProdOrder(TempReqLine);
+                    Clear(TempReqLine);
+                    Helper.ProjectProdPlanningHelper__TransferUnplannedDemandToRequisitionLine(TempUnplanDemand, TempReqLine, 187);
+
+                    TempReqLine.Reset();
+                    Helper.ProjectProdPlanningHelper__SetDefaultReqLineFilterGroup(TempReqLine, 0, Database::"Job Planning Line", Rec."No.");
 
                     PlanningPage.LookupMode(true);
                     PlanningPage.SetReqLinesOnTemporarySource(TempReqLine, true);
                     if PlanningPage.RunModal() <> Action::LookupOK then exit;
 
-                    Helper.ProjectProdPlanningHelper__SetReqLineFiltersFromUnplannedDemand(TempReqLine, TempUnplanDemand, 187);
                     ProjProdMgmt.Run(TempReqLine);
                 end;
             }

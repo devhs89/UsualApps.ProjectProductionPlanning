@@ -1,10 +1,8 @@
 namespace UsualApps.ProjectProductionPlanning;
 
-using Microsoft.Inventory.Planning;
 using Microsoft.Inventory.Requisition;
 using Microsoft.Manufacturing.Document;
 using Microsoft.Projects.Project.Job;
-using Microsoft.Projects.Project.Planning;
 
 codeunit 71826213 ProdOrderPlusProjSrcUAS
 {
@@ -13,19 +11,13 @@ codeunit 71826213 ProdOrderPlusProjSrcUAS
     local procedure MfgCarryOutAction_OnInsertProdOrderWithReqLine(var ProductionOrder: Record "Production Order"; var RequisitionLine: Record "Requisition Line")
     var
         Job: Record Job;
-        DemandLineOrigin: Enum "Planning Line Origin Type";
-        DemandType: Integer;
+        Helper: Codeunit ProjectProdPlanningHelperUAS;
         DemandNo: Code[20];
     begin
-        RequisitionLine.FilterGroup(187);
-        if not RequisitionLine.HasFilter() then exit;
-        if (RequisitionLine.GetFilter("Planning Line Origin") <> Format(DemandLineOrigin::JobPlanningLinesUAS)) then exit;
-        if not Evaluate(DemandType, RequisitionLine.GetFilter("Demand Type")) then exit;
-        if not Evaluate(DemandNo, RequisitionLine.GetFilter("Demand Order No.")) then exit;
-        RequisitionLine.FilterGroup(0);
+        if Helper.ProjectProdPlanningHelper__ValidateDemandOriginatedFromJobPlanningLine(RequisitionLine, 187) then exit;
+        DemandNo := Helper.ProjectProdPlanningHelper__GetDemandNoFromFilterGroup(RequisitionLine, 187);
 
-        if (DemandType <> Database::"Job Planning Line") or (DemandNo = '') then exit;
-        if not Job.Get(DemandNo) then exit;
+        if not Job.Get(DemandNo) then Error('The job number %1 does not exist.', DemandNo);
         this.ProdOrderPlusProjSrcUAS__InsertProjectProdOrderWithReqLine(ProductionOrder, RequisitionLine, Job);
     end;
 

@@ -28,16 +28,6 @@ page 71826210 ProjectProdPlanningUAS
                     ToolTip = 'Specifies the status of the demand.';
                     Visible = false;
                 }
-                field(DemandTaskNo; this.DemandTaskNo)
-                {
-                    Caption = 'Demand Task No.';
-                    ToolTip = 'Specifies the job task number.';
-                }
-                field(DemandLineNo; this.DemandLineNo)
-                {
-                    Caption = 'Demand Line No.';
-                    ToolTip = 'Specifies the job planning line number.';
-                }
                 field("Demand Date"; Rec."Demand Date")
                 {
                     ToolTip = 'Specifies the date when the demand order line is required.';
@@ -113,19 +103,6 @@ page 71826210 ProjectProdPlanningUAS
 
     actions
     {
-        area(Creation)
-        {
-            action(DeleteLine)
-            {
-                Caption = 'Delete Line';
-                ToolTip = 'Deletes the selected line from the list.';
-                Image = DeleteRow;
-                trigger OnAction()
-                begin
-                    this.DeleteRecord(Rec);
-                end;
-            }
-        }
         area(Processing)
         {
             action(ToggleReservationUAS)
@@ -136,10 +113,8 @@ page 71826210 ProjectProdPlanningUAS
                 Promoted = true;
                 PromotedCategory = Category5;
                 trigger OnAction()
-                var
-                    Helper: Codeunit ProjectProdPlanningHelperUAS;
                 begin
-                    Helper.ProjectProdPlanningHelper__ToggleReserveCheckbox(Rec);
+                    this.ToggleReservation();
                 end;
             }
             action(ToggleSupplyQuantitiesUAS)
@@ -150,42 +125,18 @@ page 71826210 ProjectProdPlanningUAS
                 Promoted = true;
                 PromotedCategory = Category5;
                 trigger OnAction()
-                var
-                    Helper: Codeunit ProjectProdPlanningHelperUAS;
                 begin
-                    Helper.ProjectProdPlanningHelper__ToggleRequisitionLineQuantity(Rec);
+                    this.ToggleRequisitionLineQuantity(Rec);
                 end;
             }
         }
     }
 
-    var
-        DemandTaskNo: Code[20];
-        DemandLineNo: Integer;
-
-    trigger OnAfterGetRecord()
+    trigger OnDeleteRecord(): Boolean
     begin
-        this.SetJobDetails();
-    end;
-
-    trigger OnAfterGetCurrRecord()
-    begin
-        this.SetJobDetails();
-    end;
-
-    /// <summary>
-    /// Sets the job task number and job planning line number for the current record based on the demand order number and demand line number.
-    /// </summary>
-    internal procedure SetJobDetails()
-    var
-        JobPlanLine: Record "Job Planning Line";
-    begin
-        JobPlanLine.SetCurrentKey("Job No.", "Job Contract Entry No.");
-        JobPlanLine.SetRange("Job No.", Rec."Demand Order No.");
-        JobPlanLine.SetRange("Job Contract Entry No.", Rec."Demand Line No.");
-        if not JobPlanLine.FindFirst() then exit;
-        this.DemandTaskNo := JobPlanLine."Job Task No.";
-        this.DemandLineNo := JobPlanLine."Line No.";
+        Rec.Delete(false);
+        CurrPage.Update(false);
+        exit(false);
     end;
 
     /// <summary>
@@ -197,23 +148,35 @@ page 71826210 ProjectProdPlanningUAS
     begin
         Clear(Rec);
         Rec.Copy(ReqLine, ShareTempTable);
+        if not Rec.FindSet() then Error('No records found to display on the page.');
     end;
 
-    local procedure DeleteRecord(CurrReqLine: Record "Requisition Line")
+    /// <summary>
+    /// Toggles the reserve checkbox on the requisition line records to the specified value.
+    /// </summary>
+    local procedure ToggleReservation()
+    begin
+        Rec.Reset();
+        if Rec.FindSet(true) then
+            repeat
+                Rec.Validate("Reserve", (not Rec.Reserve));
+                if Rec.Modify(true) then;
+            until Rec.Next() = 0;
+    end;
+
+    /// <summary>
+    /// Toggles the quantity of the requisition line records between the needed quantity and zero.
+    /// </summary>
+    /// <param name="CurrReqLine">The requisition line record to toggle the quantity for.</param>
+    local procedure ToggleRequisitionLineQuantity(var CurrReqLine: Record "Requisition Line")
     var
-        ReqLine: Record "Requisition Line";
+        TempReqLine: Record "Requisition Line" temporary;
     begin
-        Clear(ReqLine);
-        ReqLine.Copy(CurrReqLine);
-        ReqLine.SetCurrentKey("User ID", "Demand Type", "Worksheet Template Name", "Journal Batch Name", "Line No.", Type, "No.");
-        ReqLine.SetRecFilter();
-        if ReqLine.Count() > 0 then ReqLine.Delete(true) else Clear(CurrReqLine);
-    end;
-
-    trigger OnDeleteRecord(): Boolean
-    begin
-        Rec.Delete(false);
-        CurrPage.Update(false);
-        exit(false);
+        TempReqLine.Copy(CurrReqLine, true);
+        if TempReqLine.FindSet(true) then
+            repeat
+                TempReqLine.Validate(Quantity, (TempReqLine.Quantity = 0 ? TempReqLine."Needed Quantity" : 0));
+                if TempReqLine.Modify(true) then;
+            until TempReqLine.Next() = 0;
     end;
 }

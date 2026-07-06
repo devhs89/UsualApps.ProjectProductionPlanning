@@ -4,118 +4,191 @@ using Microsoft.Inventory.Item;
 using Microsoft.Inventory.Planning;
 using Microsoft.Inventory.Requisition;
 using Microsoft.Projects.Project.Job;
-using Microsoft.Projects.Project.Planning;
 
 codeunit 71826211 ProjectProdPlanningHelperUAS
 {
     /// <summary>
-    /// Sets the custom filter group on the unplanned demand record to filter for job planning line origin type.
+    /// Sets the default filter group on the unplanned demand record to filter for job planning lines based on the specified job record.
     /// </summary>
     /// <param name="UnplanDemand">The unplanned demand record to set the filter on.</param>
     /// <param name="Job"> The job planning line record to use for filtering.</param>
-    internal procedure ProjectProdPlanningHelper__SetJobPlanningCustomFilterGroup(var UnplanDemand: Record "Unplanned Demand"; Job: Record Job)
-    var
-        ReqLine2: Record "Requisition Line";
+    /// <param name="FilterGroup"> The filter group to use for setting the filters.</param>
+    internal procedure ProjectProdPlanningHelper__SetDefaultJobPlanningFilterGroup(var UnplanDemand: Record "Unplanned Demand"; Job: Record Job; FilterGroup: Integer)
     begin
-        this.ProjectProdPlanningHelper__SetReqLineFiltersToProdOrder(ReqLine2);
-        if ReqLine2.Count() > 0 then ReqLine2.DeleteAll();
-
-        UnplanDemand.FilterGroup(187);
-        UnplanDemand.SetCurrentKey("Demand Type", "Demand Order No.", PlanningOriginUAS);
+        UnplanDemand.FilterGroup(FilterGroup);
+        UnplanDemand.SetCurrentKey("Demand Type", "Demand Order No.");
         UnplanDemand.SetRange("Demand Type", "Demand Order Source Type"::"Job Demand".AsInteger());
         UnplanDemand.SetRange("Demand Order No.", Job."No.");
-        UnplanDemand.SetRange(PlanningOriginUAS, "Planning Line Origin Type"::JobPlanningLinesUAS);
         UnplanDemand.FilterGroup(0);
+    end;
+
+    /// <summary>
+    /// Gets the demand type from the specified unplanned demand record and filter group.
+    /// </summary>
+    /// <param name="Variant"> The variant containing the unplanned demand record to retrieve the demand type from.</param>
+    /// <param name="FilterGroup"> The filter group to use for retrieving the demand type.</param>
+    /// <returns> The demand type as a text value.</returns>
+    internal procedure ProjectProdPlanningHelper__GetDemandTypeFromFilterGroup(Variant: Variant; FilterGroup: Integer) DemandType: Text
+    var
+        UnplannedDemand: Record "Unplanned Demand";
+        ReqLine: Record "Requisition Line";
+        RecRef: RecordRef;
+    begin
+        if not Variant.IsRecord() then Error('Invalid record variant provided for validation.');
+        RecRef.GetTable(Variant);
+        case RecRef.Number of
+            Database::"Unplanned Demand":
+                begin
+                    RecRef.SetTable(UnplannedDemand);
+                    UnplannedDemand.FilterGroup(FilterGroup);
+                    DemandType := UnplannedDemand.GetFilter("Demand Type");
+                end;
+            Database::"Requisition Line":
+                begin
+                    RecRef.SetTable(ReqLine);
+                    ReqLine.FilterGroup(FilterGroup);
+                    DemandType := ReqLine.GetFilter("Demand Type");
+                end;
+        end;
+        exit(DemandType);
+    end;
+
+    /// <summary>
+    /// Gets the demand order number from the specified unplanned demand record and filter group.
+    /// </summary>
+    /// <param name="Variant">The variant containing the unplanned demand record to retrieve the demand order number from.</param>
+    /// <param name="FilterGroup">The filter group to use for retrieving the demand order number.</param>
+    /// <returns>The demand order number as a code value.</returns>
+    internal procedure ProjectProdPlanningHelper__GetDemandNoFromFilterGroup(Variant: Variant; FilterGroup: Integer) DemandNo: Code[20]
+    var
+        UnplannedDemand: Record "Unplanned Demand";
+        ReqLine: Record "Requisition Line";
+        RecRef: RecordRef;
+    begin
+        if not Variant.IsRecord() then Error('Invalid record variant provided for validation.');
+        RecRef.GetTable(Variant);
+        case RecRef.Number of
+            Database::"Unplanned Demand":
+                begin
+                    RecRef.SetTable(UnplannedDemand);
+                    UnplannedDemand.FilterGroup(FilterGroup);
+                    if Evaluate(DemandNo, UnplannedDemand.GetFilter("Demand Order No.")) then;
+                end;
+            Database::"Requisition Line":
+                begin
+                    RecRef.SetTable(ReqLine);
+                    ReqLine.FilterGroup(FilterGroup);
+                    if Evaluate(DemandNo, ReqLine.GetFilter("Demand Order No.")) then;
+                end;
+        end;
+        exit(DemandNo);
+    end;
+
+    /// <summary>
+    /// Validates that the unplanned demand record originated from a job planning line based on the specified filter group.
+    /// </summary>
+    /// <param name="Variant">The variant containing the unplanned demand record to validate.</param>
+    /// <param name="FilterGroup"> The filter group to use for validation.</param>
+    /// <returns> True if the demand originated from a job planning line; otherwise, false.</returns>
+    internal procedure ProjectProdPlanningHelper__ValidateDemandOriginatedFromJobPlanningLine(Variant: Variant; FilterGroup: Integer): Boolean
+    var
+        UnplannedDemand: Record "Unplanned Demand";
+        ReqLine: Record "Requisition Line";
+        Job: Record Job;
+        RecRef: RecordRef;
+        IsJobDemandType: Boolean;
+        DemandNoFilter: Code[20];
+    begin
+        if not Variant.IsRecord() then Error('Invalid record variant provided for validation.');
+        RecRef.GetTable(Variant);
+        case RecRef.Number of
+            Database::"Unplanned Demand":
+                begin
+                    RecRef.SetTable(UnplannedDemand);
+                    IsJobDemandType := this.ProjectProdPlanningHelper__GetDemandTypeFromFilterGroup(UnplannedDemand, FilterGroup) = Format(Enum::"Unplanned Demand Type"::Job);
+                    DemandNoFilter := this.ProjectProdPlanningHelper__GetDemandNoFromFilterGroup(UnplannedDemand, FilterGroup);
+                end;
+            Database::"Requisition Line":
+                begin
+                    RecRef.SetTable(ReqLine);
+                    IsJobDemandType := this.ProjectProdPlanningHelper__GetDemandTypeFromFilterGroup(ReqLine, FilterGroup) = Format(Enum::"Unplanned Demand Type"::Job);
+                    DemandNoFilter := this.ProjectProdPlanningHelper__GetDemandNoFromFilterGroup(ReqLine, FilterGroup);
+                end;
+        end;
+        Clear(Job);
+        Job.SetCurrentKey("No.");
+        Job.SetRange("No.", DemandNoFilter);
+        exit(IsJobDemandType and (Job.Count() > 0));
+    end;
+
+    /// <summary>
+    /// Validates that the requisition line record originated from a job planning line based on the specified filter group.
+    /// </summary>
+    /// <param name="ReqLine">The requisition line record to validate.</param>
+    /// <param name="FilterGroup"> The filter group to use for validation.</param>
+    /// <returns> True if the demand originated from a job planning line; otherwise, false.</returns>
+    internal procedure ProjectProdPlanningHelper__ValidateDemandOriginatedFromJobPlanningLine(var ReqLine: Record "Requisition Line"; FilterGroup: Integer): Boolean
+    var
+        Job: Record Job;
+        IsJobDemandType: Boolean;
+        DemandNoFilter: Code[20];
+    begin
+        IsJobDemandType := this.ProjectProdPlanningHelper__GetDemandTypeFromFilterGroup(ReqLine, FilterGroup) = Format(Enum::"Unplanned Demand Type"::Job);
+        DemandNoFilter := this.ProjectProdPlanningHelper__GetDemandNoFromFilterGroup(ReqLine, FilterGroup);
+        Job.SetCurrentKey("No.");
+        Job.SetRange("No.", DemandNoFilter);
+        exit(IsJobDemandType and (Job.Count() > 0));
+    end;
+
+    /// <summary>
+    /// Sets the default filters on the requisition line record to filter for order planning lines based on the specified filter group.
+    /// </summary>
+    /// <param name="ReqLine">The requisition line record to set the filters on.</param>
+    /// <param name="FilterGroup">The filter group to use for setting the filters.</param>
+    internal procedure ProjectProdPlanningHelper__SetDefaultReqLineFilterGroup(var ReqLine: Record "Requisition Line"; FilterGroup: Integer; DemandType: Integer; DemandNo: Code[20])
+    var
+        CurrFilterGroup: Integer;
+    begin
+        CurrFilterGroup := ReqLine.FilterGroup();
+        ReqLine.FilterGroup(FilterGroup);
+        ReqLine.SetRange("Worksheet Template Name", '');
+        ReqLine.SetRange("Journal Batch Name", ReqLine.GetJnlBatchNameForOrderPlanning());
+        ReqLine.SetRange("User ID", UserId);
+        ReqLine.SetRange("Planning Line Origin", "Planning Line Origin Type"::"Order Planning");
+        ReqLine.SetRange("Replenishment System", ReqLine."Replenishment System"::"Prod. Order");
+        ReqLine.SetRange("Demand Type", DemandType);
+        ReqLine.SetRange("Demand Order No.", DemandNo);
+        ReqLine.FilterGroup(CurrFilterGroup);
     end;
 
     /// <summary>
     /// Transfers the unplanned demand records to the requisition line records, setting the supply quantity and dates accordingly.
     /// </summary>
-    /// <param name="ReqLine">The requisition line record to transfer the unplanned demand to.</param>
     /// <param name="UnplanDemand">The unplanned demand record to transfer from.</param>
-    internal procedure ProjectProdPlanningHelper__TransferUnplannedDemandToRequisitionLine(var ReqLine: Record "Requisition Line"; var UnplanDemand: Record "Unplanned Demand")
-    begin
-        UnplanDemand.Reset();
-        if UnplanDemand.FindSet(false) then
-            repeat
-                if UnplanDemand."Item No." = '' then continue;
-                ReqLine.TransferFromUnplannedDemand(UnplanDemand);
-                ReqLine.SetSupplyQty(UnplanDemand."Quantity (Base)", UnplanDemand."Needed Qty. (Base)");
-                ReqLine.SetSupplyDates(UnplanDemand."Demand Date");
-                ReqLine."Planning Line Origin" := ReqLine."Planning Line Origin"::JobPlanningLinesUAS;
-                if not ReqLine.Insert(false) then Error('Failed to insert Requisition Line %1 for Item %2', ReqLine."Line No.", ReqLine."No.") else Commit();
-            until UnplanDemand.Next() = 0;
-    end;
-
-    /// <summary>
-    /// Sets the filters on the requisition line record to filter for production order replenishment system.
-    /// </summary>
-    /// <param name="ReqLine">The requisition line record to set the filters on.</param>
-    internal procedure ProjectProdPlanningHelper__SetReqLineFiltersToProdOrder(var ReqLine: Record "Requisition Line")
-    begin
-        ReqLine.Reset();
-        ReqLine.Init();
-        ReqLine.GetJnlBatchNameForOrderPlanning();
-        ReqLine.SetRange("User ID", UserId);
-        ReqLine.SetRange("Planning Line Origin", "Planning Line Origin Type"::JobPlanningLinesUAS);
-        ReqLine.SetRange("Replenishment System", ReqLine."Replenishment System"::"Prod. Order");
-    end;
-
-    /// <summary>
-    /// Sets the filters on the requisition line record based on the unplanned demand record, using the specified filter group.
-    /// </summary>
-    /// <param name="ReqLine">The requisition line record to set the filters on.</param>
-    /// <param name="UnplanDemand">The unplanned demand record to use for filtering.</param>
-    /// <param name="FilterGrp">The filter group to use for setting the filters.</param>
-    internal procedure ProjectProdPlanningHelper__SetReqLineFiltersFromUnplannedDemand(var ReqLine: Record "Requisition Line"; var UnplanDemand: Record "Unplanned Demand"; FilterGrp: Integer)
+    /// <param name="TempReqLine">The requisition line record to transfer the unplanned demand to.</param>
+    internal procedure ProjectProdPlanningHelper__TransferUnplannedDemandToRequisitionLine(var UnplanDemand: Record "Unplanned Demand"; var TempReqLine: Record "Requisition Line"; FilterGroup: Integer)
     var
+        DemandType: Enum "Unplanned Demand Type";
         DemandNo: Code[20];
     begin
-        if UnplanDemand.GetFilter(PlanningOriginUAS) <> Format(UnplanDemand.PlanningOriginUAS::JobPlanningLinesUAS) then Error('Demand did not originate from a Job Planning Line.');
-        ReqLine.Reset();
-        ReqLine.FilterGroup(FilterGrp);
-        this.ProjectProdPlanningHelper__SetReqLineFiltersToProdOrder(ReqLine);
+        if not this.ProjectProdPlanningHelper__ValidateDemandOriginatedFromJobPlanningLine(UnplanDemand, FilterGroup) then Error('Demand did not originate from a Job Planning Line.');
+        DemandType := this.ProjectProdPlanningHelper__GetDemandTypeFromFilterGroup(UnplanDemand, FilterGroup) = Format(DemandType::Job) ? DemandType::Job : DemandType::" ";
+        DemandNo := this.ProjectProdPlanningHelper__GetDemandNoFromFilterGroup(UnplanDemand, FilterGroup);
 
-        if UnplanDemand.GetFilter("Demand Type") = Format(UnplanDemand."Demand Type"::Job) then
-            ReqLine.SetRange("Demand Type", Database::"Job Planning Line");
-        if Evaluate(DemandNo, UnplanDemand.GetFilter("Demand Order No.")) then
-            ReqLine.SetRange("Demand Order No.", DemandNo);
-        ReqLine.FilterGroup(0);
-    end;
-
-    /// <summary>
-    /// Toggles the reserve checkbox on the requisition line records to the specified value.
-    /// </summary>
-    /// <param name="CurrReqLine">The requisition line record to toggle the reserve checkbox for.</param>
-    /// <param name="Resv"> The value to set the reserve checkbox to.</param>
-    internal procedure ProjectProdPlanningHelper__ToggleReserveCheckbox(var CurrReqLine: Record "Requisition Line")
-    var
-        TempReqLine: Record "Requisition Line" temporary;
-    begin
-        TempReqLine.Copy(CurrReqLine, true);
-        if TempReqLine.FindSet(true) then;
-        repeat
-            TempReqLine."Planning Line Origin" := TempReqLine."Planning Line Origin"::"Order Planning";
-            TempReqLine.Validate("Reserve", (not TempReqLine.Reserve));
-            TempReqLine."Planning Line Origin" := TempReqLine."Planning Line Origin"::JobPlanningLinesUAS;
-            if TempReqLine.Modify(false) then;
-        until TempReqLine.Next() = 0;
-    end;
-
-    /// <summary>
-    /// Toggles the quantity of the requisition line records between the needed quantity and zero.
-    /// </summary>
-    /// <param name="CurrReqLine">The requisition line record to toggle the quantity for.</param>
-    /// <param name="ChangeQtyTo">The quantity to change the requisition line records to.</param>
-    internal procedure ProjectProdPlanningHelper__ToggleRequisitionLineQuantity(var CurrReqLine: Record "Requisition Line")
-    var
-        TempReqLine: Record "Requisition Line" temporary;
-    begin
-        TempReqLine.Copy(CurrReqLine, true);
-        if TempReqLine.FindSet(true) then;
-        repeat
-            TempReqLine.Validate(Quantity, (TempReqLine.Quantity = 0 ? TempReqLine."Needed Quantity" : 0));
-            if TempReqLine.Modify(false) then;
-        until TempReqLine.Next() = 0;
+        UnplanDemand.Reset();
+        UnplanDemand.SetCurrentKey("Demand Type", "Demand Order No.", "Item No.");
+        UnplanDemand.SetRange("Demand Type", UnplanDemand."Demand Type"::Job);
+        UnplanDemand.SetRange("Demand Order No.", DemandNo);
+        UnplanDemand.SetFilter("Item No.", '<>''''');
+        if UnplanDemand.FindSet(false) then begin
+            Clear(TempReqLine);
+            repeat
+                TempReqLine.TransferFromUnplannedDemand(UnplanDemand);
+                TempReqLine.SetSupplyQty(UnplanDemand."Quantity (Base)", UnplanDemand."Needed Qty. (Base)");
+                TempReqLine.SetSupplyDates(UnplanDemand."Demand Date");
+                TempReqLine."Planning Line Origin" := TempReqLine."Planning Line Origin"::"Order Planning";
+                if not TempReqLine.Insert(false) then Error('Failed to insert Requisition Line %1 for Item %2', TempReqLine."Line No.", TempReqLine."No.") else Commit();
+            until UnplanDemand.Next() = 0;
+        end;
     end;
 }

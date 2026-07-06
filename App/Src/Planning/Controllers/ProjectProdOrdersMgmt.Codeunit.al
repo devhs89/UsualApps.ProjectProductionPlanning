@@ -19,18 +19,18 @@ codeunit 71826212 ProjectProdOrdersMgmtUAS
         ProdWkshTempl: Code[10];
         ProdWkshName: Code[10];
     begin
-        this.ProjectProdOrdersMgmt__GetRequisitionLines(TempReqLine, Rec, true);
+        this.ProjectProdOrdersMgmt__TransferReqLinesToSourceReqLinesTable(TempReqLine, Rec, true);
         ProdOrderChoice := Enum::"Production Order Status"::"Firm Planned";
         Clear(ProdWkshTempl);
         Clear(ProdWkshName);
         Clear(TempDocumentEntry);
         this.OnAfterSetMfgCarrryOutActionFromProdOrderParameters(TempReqLine, ProdOrderChoice, ProdWkshTempl, ProdWkshName);
 
-        PersistReqLine.Reset();
+        Clear(PersistReqLine);
         PersistReqLine.SetCurrentKey("User ID", "Demand Type", "Worksheet Template Name", "Journal Batch Name", "Line No.", Type, "No.");
         repeat
             if MfgAction.CarryOutActionsFromProdOrder(TempReqLine, ProdOrderChoice, ProdWkshTempl, ProdWkshName, TempDocumentEntry, CarryAction) then begin
-                Clear(PersistReqLine);
+                PersistReqLine.Copy(TempReqLine);
                 PersistReqLine.SetRecFilter();
                 if PersistReqLine.Count() > 0 then PersistReqLine.Delete(true);
             end;
@@ -44,7 +44,8 @@ codeunit 71826212 ProjectProdOrdersMgmtUAS
     /// </summary>
     /// <param name="ReqLine">The requisition line record containing the records to copy.</param>
     /// <param name="ExtReqLine">The external requisition line record to copy from.</param>
-    local procedure ProjectProdOrdersMgmt__GetRequisitionLines(var ReqLine: Record "Requisition Line"; var ExtReqLine: Record "Requisition Line"; ShareTempTable: Boolean)
+    /// <param name="ShareTempTable">Indicates whether to share the temporary table.</param>
+    local procedure ProjectProdOrdersMgmt__TransferReqLinesToSourceReqLinesTable(var ReqLine: Record "Requisition Line"; var ExtReqLine: Record "Requisition Line"; ShareTempTable: Boolean)
     begin
         Clear(ReqLine);
         ReqLine.Copy(ExtReqLine, ShareTempTable);
