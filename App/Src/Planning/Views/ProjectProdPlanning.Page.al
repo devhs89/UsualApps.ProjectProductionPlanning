@@ -126,7 +126,7 @@ page 71826210 ProjectProdPlanningUAS
                 PromotedCategory = Category5;
                 trigger OnAction()
                 begin
-                    this.ToggleRequisitionLineQuantity(Rec);
+                    this.ToggleRequisitionLineQuantity();
                 end;
             }
         }
@@ -145,10 +145,19 @@ page 71826210 ProjectProdPlanningUAS
     /// <param name="ReqLine">The requisition line record containing the records to copy.</param>
     /// <param name="ShareTempTable">Indicates whether to share the temporary table.</param>
     internal procedure SetReqLinesOnTemporarySource(var ReqLine: Record "Requisition Line"; ShareTempTable: Boolean)
+    var
+        Helper: Codeunit ProjectProdPlanningHelperUAS;
     begin
-        Clear(Rec);
-        Rec.Copy(ReqLine, ShareTempTable);
-        if not Rec.FindSet() then Error('No records found to display on the page.');
+        ReqLine.Reset();
+        if not ReqLine.FindSet() then Error('No records found to display on the page.');
+        repeat
+            if ReqLine."Replenishment System" <> ReqLine."Replenishment System"::"Prod. Order" then continue;
+            Rec.TransferFields(ReqLine);
+            if Rec.Insert(false) then;
+        until ReqLine.Next() = 0;
+        Rec.Reset();
+        Helper.ProjectProdPlanningHelper__SetDefaultReqLineFilterGroup(Rec, 0, Database::"Job Planning Line", Rec."Demand Order No.");
+        Helper.ProjectProdPlanningHelper__SetDefaultReqLineFilterGroup(Rec, 187, Database::"Job Planning Line", Rec."Demand Order No.");
     end;
 
     /// <summary>
@@ -156,7 +165,6 @@ page 71826210 ProjectProdPlanningUAS
     /// </summary>
     local procedure ToggleReservation()
     begin
-        Rec.Reset();
         if Rec.FindSet(true) then
             repeat
                 Rec.Validate("Reserve", (not Rec.Reserve));
@@ -167,16 +175,12 @@ page 71826210 ProjectProdPlanningUAS
     /// <summary>
     /// Toggles the quantity of the requisition line records between the needed quantity and zero.
     /// </summary>
-    /// <param name="CurrReqLine">The requisition line record to toggle the quantity for.</param>
-    local procedure ToggleRequisitionLineQuantity(var CurrReqLine: Record "Requisition Line")
-    var
-        TempReqLine: Record "Requisition Line" temporary;
+    local procedure ToggleRequisitionLineQuantity()
     begin
-        TempReqLine.Copy(CurrReqLine, true);
-        if TempReqLine.FindSet(true) then
+        if Rec.FindSet(true) then
             repeat
-                TempReqLine.Validate(Quantity, (TempReqLine.Quantity = 0 ? TempReqLine."Needed Quantity" : 0));
-                if TempReqLine.Modify(true) then;
-            until TempReqLine.Next() = 0;
+                Rec.Validate(Quantity, (Rec.Quantity = 0 ? Rec."Needed Quantity" : 0));
+                if Rec.Modify(true) then;
+            until Rec.Next() = 0;
     end;
 }
