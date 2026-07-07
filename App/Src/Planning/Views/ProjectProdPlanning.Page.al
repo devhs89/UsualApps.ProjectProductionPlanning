@@ -1,7 +1,9 @@
 namespace UsualApps.ProjectProductionPlanning;
 
+using Microsoft.Inventory.Item;
 using Microsoft.Inventory.Requisition;
-using Microsoft.Projects.Project.Planning;
+using Microsoft.Manufacturing.ProductionBOM;
+using Microsoft.Manufacturing.Routing;
 
 page 71826210 ProjectProdPlanningUAS
 {
@@ -11,6 +13,7 @@ page 71826210 ProjectProdPlanningUAS
     ApplicationArea = Planning;
     PageType = Worksheet;
     InsertAllowed = false;
+    Extensible = true;
     PromotedActionCategories = 'New,Process,Report,Home,Others';
 
     layout
@@ -105,6 +108,62 @@ page 71826210 ProjectProdPlanningUAS
     {
         area(Processing)
         {
+            action(ViewItemCardUAS)
+            {
+                Caption = 'Item Card';
+                ToolTip = 'Opens the item card for the selected item.';
+                Image = Item;
+                Promoted = true;
+                PromotedCategory = Category4;
+                RunObject = page "Item Card";
+                RunPageLink = "No." = field("No.");
+                RunPageView = sorting("No.");
+                RunPageMode = View;
+            }
+            action(ViewProductionBomUAS)
+            {
+                Caption = 'Production BOM';
+                ToolTip = 'Opens the production BOM for the selected item.';
+                Image = BOM;
+                Promoted = true;
+                PromotedCategory = Category4;
+                trigger OnAction()
+                var
+                    Item: Record Item;
+                    Bom: Record "Production BOM Header";
+                    BomPage: Page "Production BOM";
+                begin
+                    if not Item.Get(Rec."No.") then exit;
+                    if Item."Production BOM No." = '' then exit;
+                    Bom.SetRange("No.", Item."Production BOM No.");
+                    if not Bom.FindFirst() then Message('No production BOM found for item %1.', Rec."No.");
+                    BomPage.SetRecord(Bom);
+                    BomPage.Editable(false);
+                    BomPage.Run();
+                end;
+            }
+            action(ViewRoutingUAS)
+            {
+                Caption = 'Routing';
+                ToolTip = 'Opens the routing for the selected item.';
+                Image = Route;
+                Promoted = true;
+                PromotedCategory = Category4;
+                trigger OnAction()
+                var
+                    Item: Record Item;
+                    Route: Record "Routing Header";
+                    RoutePage: Page Routing;
+                begin
+                    if not Item.Get(Rec."No.") then exit;
+                    if Item."Routing No." = '' then exit;
+                    Route.SetRange("No.", Item."Routing No.");
+                    if not Route.FindFirst() then Message('No routing found for item %1.', Rec."No.");
+                    RoutePage.SetRecord(Route);
+                    RoutePage.Editable(false);
+                    RoutePage.Run();
+                end;
+            }
             action(ToggleReservationUAS)
             {
                 Caption = 'Toggle Reservation';
@@ -132,6 +191,18 @@ page 71826210 ProjectProdPlanningUAS
         }
     }
 
+    trigger OnOpenPage()
+    var
+        NoRecNotify: Notification;
+        LabelTxt: Label 'All items for the project are available.';
+    begin
+        if Rec.Count = 0 then begin
+            NoRecNotify.Scope := NotificationScope::LocalScope;
+            NoRecNotify.Message(LabelTxt);
+            NoRecNotify.Send();
+        end;
+    end;
+
     trigger OnDeleteRecord(): Boolean
     begin
         Rec.Delete(false);
@@ -145,19 +216,15 @@ page 71826210 ProjectProdPlanningUAS
     /// <param name="ReqLine">The requisition line record containing the records to copy.</param>
     /// <param name="ShareTempTable">Indicates whether to share the temporary table.</param>
     internal procedure SetReqLinesOnTemporarySource(var ReqLine: Record "Requisition Line"; ShareTempTable: Boolean)
-    var
-        Helper: Codeunit ProjectProdPlanningHelperUAS;
     begin
-        ReqLine.Reset();
-        if not ReqLine.FindSet() then Error('No records found to display on the page.');
-        repeat
-            if ReqLine."Replenishment System" <> ReqLine."Replenishment System"::"Prod. Order" then continue;
-            Rec.TransferFields(ReqLine);
-            if Rec.Insert(false) then;
-        until ReqLine.Next() = 0;
-        Rec.Reset();
-        Helper.ProjectProdPlanningHelper__SetDefaultReqLineFilterGroup(Rec, 0, Database::"Job Planning Line", Rec."Demand Order No.");
-        Helper.ProjectProdPlanningHelper__SetDefaultReqLineFilterGroup(Rec, 187, Database::"Job Planning Line", Rec."Demand Order No.");
+        Clear(Rec);
+        Rec.CopyFilters(ReqLine);
+        if ReqLine.FindSet() then
+            repeat
+                if ReqLine."Replenishment System" <> ReqLine."Replenishment System"::"Prod. Order" then continue;
+                Rec.TransferFields(ReqLine);
+                if Rec.Insert(false) then;
+            until ReqLine.Next() = 0;
     end;
 
     /// <summary>

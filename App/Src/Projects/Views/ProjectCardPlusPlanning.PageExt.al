@@ -2,8 +2,8 @@ namespace UsualApps.ProjectProductionPlanning;
 
 using Microsoft.Inventory.Planning;
 using Microsoft.Inventory.Requisition;
-using Microsoft.Projects.Project.Planning;
 using Microsoft.Projects.Project.Job;
+using Microsoft.Projects.Project.Planning;
 
 pageextension 71826210 ProjectCardPlusPlanningUAS extends "Job Card"
 {
