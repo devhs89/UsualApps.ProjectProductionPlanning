@@ -40,7 +40,7 @@ pageextension 71826210 ProjectCardPlusPlanningUAS extends "Job Card"
                     Helper.ProjectProdPlanningHelper__SetDefaultReqLineFilterGroup(TempReqLine, 0, Database::"Job Planning Line", Rec."No.");
 
                     PlanningPage.LookupMode(true);
-                    PlanningPage.SetReqLinesOnTemporarySource(TempReqLine, true);
+                    PlanningPage.TransferExternalReqLinesToSourceReqLines(TempReqLine, true);
                     if PlanningPage.RunModal() <> Action::LookupOK then exit;
 
                     ProjProdMgmt.Run(TempReqLine);

@@ -162,6 +162,22 @@ codeunit 71826211 ProjectProdPlanningHelperUAS
     end;
 
     /// <summary>
+    /// Copies the filters from the specified requisition line record to another requisition line record based on the specified filter group.
+    /// </summary>
+    /// <param name="FromReqLine">The requisition line record to copy the filters from.</param>
+    /// <param name="ToReqLine">The requisition line record to copy the filters to.</param>
+    /// <param name="FromFilterGroup">The filter group to use for the source requisition line record.</param>
+    /// <param name="ToFilterGroup">The filter group to use for the destination requis
+    internal procedure ProjectProdPlanningHelper__CopyRequisuitionFilters(var FromReqLine: Record "Requisition Line"; var ToReqLine: Record "Requisition Line"; FromFilterGroup: Integer; ToFilterGroup: Integer)
+    begin
+        FromReqLine.FilterGroup(FromFilterGroup);
+        ToReqLine.FilterGroup(ToFilterGroup);
+        ToReqLine.CopyFilters(FromReqLine);
+        FromReqLine.FilterGroup(0);
+        ToReqLine.FilterGroup(0);
+    end;
+
+    /// <summary>
     /// Transfers the unplanned demand records to the requisition line records, setting the supply quantity and dates accordingly.
     /// </summary>
     /// <param name="UnplanDemand">The unplanned demand record to transfer from.</param>
@@ -190,5 +206,25 @@ codeunit 71826211 ProjectProdPlanningHelperUAS
                 if not TempReqLine.Insert(false) then Error('Failed to insert Requisition Line %1 for Item %2', TempReqLine."Line No.", TempReqLine."No.") else Commit();
             until UnplanDemand.Next() = 0;
         end;
+    end;
+
+    /// <summary>
+    /// Copies the requisition line records from one table to another, optionally sharing the temporary table.
+    /// </summary>
+    /// <param name="FromReqLine">The requisition line record to copy from.</param>
+    /// <param name="ToReqLine">The requisition line record to copy to.</param>
+    /// <param name="FilterGroup">The filter group to use for copying the records.</param>
+    /// <param name="ShareTempTable">Indicates whether to share the temporary table.</param>
+    internal procedure ProjectProdPlanningHelper__CopyProdOrderReqLinesOver(var FromReqLine: Record "Requisition Line"; var ToReqLine: Record "Requisition Line"; FilterGroup: Integer; ShareTempTable: Boolean)
+    begin
+        FromReqLine.FilterGroup(FilterGroup);
+        if FromReqLine.FindSet() then
+            if ShareTempTable then
+                ToReqLine.Copy(FromReqLine, true)
+            else
+                repeat
+                    ToReqLine.TransferFields(FromReqLine);
+                    if ToReqLine.Insert(false) then;
+                until FromReqLine.Next() = 0;
     end;
 }

@@ -1,5 +1,6 @@
 namespace UsualApps.ProjectProductionPlanning;
 
+using Microsoft.Inventory.Item;
 using Microsoft.Inventory.Requisition;
 using Microsoft.Manufacturing.Document;
 using Microsoft.Projects.Project.Job;
@@ -11,14 +12,27 @@ codeunit 71826213 ProdOrderPlusProjSrcUAS
     local procedure MfgCarryOutAction_OnInsertProdOrderWithReqLine(var ProductionOrder: Record "Production Order"; var RequisitionLine: Record "Requisition Line")
     var
         Job: Record Job;
-        Helper: Codeunit ProjectProdPlanningHelperUAS;
-        DemandNo: Code[20];
     begin
-        if Helper.ProjectProdPlanningHelper__ValidateDemandOriginatedFromJobPlanningLine(RequisitionLine, 187) then exit;
-        DemandNo := Helper.ProjectProdPlanningHelper__GetDemandNoFromFilterGroup(RequisitionLine, 187);
-
-        if not Job.Get(DemandNo) then Error('The job number %1 does not exist.', DemandNo);
+        if RequisitionLine."Planning Line Origin" <> RequisitionLine."Planning Line Origin"::ProjectPlanningUAS then exit;
+        if not Job.Get(RequisitionLine."Demand Order No.") then Error('The job number %1 does not exist.', RequisitionLine."Demand Order No.");
         this.ProdOrderPlusProjSrcUAS__InsertProjectProdOrderWithReqLine(ProductionOrder, RequisitionLine, Job);
+    end;
+
+    // Event raised after the production order is initiated with the requisition line to check if a production order already exists for the job.
+    [EventSubscriber(ObjectType::Codeunit, Codeunit::"Mfg. Carry Out Action", OnInsertProdOrderOnAfterFindTempProdOrder, '', false, false)]
+    local procedure MfgCarryOutAction_OnInsertProdOrderOnAfterFindTempProdOrder(var ReqLine: Record "Requisition Line"; var ProdOrder: Record "Production Order"; var HeaderExists: Boolean; var Item: Record Item)
+    var
+        ExistignProd: Record "Production Order";
+    begin
+        if ReqLine."Planning Line Origin" <> ReqLine."Planning Line Origin"::ProjectPlanningUAS then exit;
+        ExistignProd.SetCurrentKey(Status, "Source Type", "Source No.");
+        ExistignProd.SetRange(Status, "Production Order Status"::"Firm Planned");
+        ExistignProd.SetRange("Source Type", "Prod. Order Source Type"::ProjectHeaderUAS);
+        ExistignProd.SetRange("Source No.", ReqLine."Demand Order No.");
+        if ExistignProd.FindFirst() then begin
+            ProdOrder.Copy(ExistignProd);
+            HeaderExists := true;
+        end;
     end;
 
     /// <summary>

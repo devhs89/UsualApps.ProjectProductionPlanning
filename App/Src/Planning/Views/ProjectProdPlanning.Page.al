@@ -211,20 +211,20 @@ page 71826210 ProjectProdPlanningUAS
     end;
 
     /// <summary>
-    /// Copies the records from the requisition line table to the page's source table.
+    /// Copy the requisition lines from one record to another.
     /// </summary>
     /// <param name="ReqLine">The requisition line record containing the records to copy.</param>
-    /// <param name="ShareTempTable">Indicates whether to share the temporary table.</param>
-    internal procedure SetReqLinesOnTemporarySource(var ReqLine: Record "Requisition Line"; ShareTempTable: Boolean)
+    /// <param name="ShareTable">Indicates whether to share the temporary table.</param>
+    internal procedure TransferExternalReqLinesToSourceReqLines(var ReqLine: Record "Requisition Line"; ShareTable: Boolean)
+    var
+        Helper: Codeunit ProjectProdPlanningHelperUAS;
     begin
         Clear(Rec);
-        Rec.CopyFilters(ReqLine);
-        if ReqLine.FindSet() then
-            repeat
-                if ReqLine."Replenishment System" <> ReqLine."Replenishment System"::"Prod. Order" then continue;
-                Rec.TransferFields(ReqLine);
-                if Rec.Insert(false) then;
-            until ReqLine.Next() = 0;
+        Helper.ProjectProdPlanningHelper__CopyRequisuitionFilters(ReqLine, Rec, 187, 0);
+        Helper.ProjectProdPlanningHelper__CopyRequisuitionFilters(ReqLine, Rec, 187, 187);
+        Helper.ProjectProdPlanningHelper__CopyProdOrderReqLinesOver(ReqLine, Rec, 0, false);
+        Rec.SetRange("Replenishment System", Rec."Replenishment System"::"Prod. Order");
+        if not Rec.FindSet() then;
     end;
 
     /// <summary>
