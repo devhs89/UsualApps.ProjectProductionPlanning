@@ -103,6 +103,8 @@ codeunit 71826213 ProdOrderPlusProjSrcUAS
         Clear(ProdOrder."Dimension Set ID");
         ProdOrder.UpdateDatetime();
         ProdOrder.Modify();
+        // Create the production order line for the requisition line and the newly created production order.
+        this.ProjectProdOrdersMgmt__CreateProductionOrderLine(ReqLine, ProdOrder);
         exit(ProdOrder.Count() > 0);
     end;
 

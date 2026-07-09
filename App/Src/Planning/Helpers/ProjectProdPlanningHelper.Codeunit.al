@@ -217,14 +217,6 @@ codeunit 71826211 ProjectProdPlanningHelperUAS
     /// <param name="ShareTempTable">Indicates whether to share the temporary table.</param>
     internal procedure ProjectProdPlanningHelper__CopyProdOrderReqLinesOver(var FromReqLine: Record "Requisition Line"; var ToReqLine: Record "Requisition Line"; FilterGroup: Integer; ShareTempTable: Boolean)
     begin
-        FromReqLine.FilterGroup(FilterGroup);
-        if FromReqLine.FindSet() then
-            if ShareTempTable then
-                ToReqLine.Copy(FromReqLine, true)
-            else
-                repeat
-                    ToReqLine.TransferFields(FromReqLine);
-                    if ToReqLine.Insert(false) then;
-                until FromReqLine.Next() = 0;
+        ToReqLine.Copy(FromReqLine, ShareTempTable)
     end;
 }

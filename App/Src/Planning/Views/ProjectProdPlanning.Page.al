@@ -191,6 +191,11 @@ page 71826210 ProjectProdPlanningUAS
         }
     }
 
+    trigger OnInit()
+    begin
+        if Rec.FindSet() then;
+    end;
+
     trigger OnOpenPage()
     var
         NoRecNotify: Notification;
@@ -220,11 +225,11 @@ page 71826210 ProjectProdPlanningUAS
         Helper: Codeunit ProjectProdPlanningHelperUAS;
     begin
         Clear(Rec);
+        Helper.ProjectProdPlanningHelper__CopyProdOrderReqLinesOver(ReqLine, Rec, 0, true);
+        Rec.Reset();
         Helper.ProjectProdPlanningHelper__CopyRequisuitionFilters(ReqLine, Rec, 187, 0);
         Helper.ProjectProdPlanningHelper__CopyRequisuitionFilters(ReqLine, Rec, 187, 187);
-        Helper.ProjectProdPlanningHelper__CopyProdOrderReqLinesOver(ReqLine, Rec, 0, false);
         Rec.SetRange("Replenishment System", Rec."Replenishment System"::"Prod. Order");
-        if not Rec.FindSet() then;
     end;
 
     /// <summary>

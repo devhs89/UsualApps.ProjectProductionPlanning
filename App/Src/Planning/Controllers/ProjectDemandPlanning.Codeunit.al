@@ -19,15 +19,13 @@ codeunit 71826210 ProjectDemandPlanningUAS
     local procedure ProjectDemandPlanningUAS__IsUnplannedDemandOfJobPlanningLineOrigin(var UnplannedDemand: Record "Unplanned Demand"): Boolean
     var
         DemandTypeText: Text;
-        ComparisonText: Text;
         DemandNo: Code[20];
         Result: Boolean;
     begin
         UnplannedDemand.FilterGroup(187);
         DemandTypeText := UnplannedDemand.GetFilter("Demand Type");
-        ComparisonText := Format(UnplannedDemand."Demand Type"::Job);
         if not Evaluate(DemandNo, UnplannedDemand.GetFilter("Demand Order No.")) then exit;
-        Result := (DemandTypeText = ComparisonText) and (DemandNo <> '');
+        Result := (DemandTypeText = Format(UnplannedDemand."Demand Type"::Job)) and (DemandNo <> '');
         UnplannedDemand.FilterGroup(0);
         exit(Result);
     end;

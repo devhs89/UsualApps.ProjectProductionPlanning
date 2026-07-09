@@ -15,9 +15,13 @@ codeunit 71826212 ProjectProdOrdersMgmtUAS
         ProdOrderChoice: Enum "Planning Create Prod. Order";
         CreatedProdOrders: TextBuilder;
         ModifiedProdOrders: TextBuilder;
+        MessageLabelTxt: TextBuilder;
+        NoDemandLinesLabelTxt: Label 'No demand lines to process.';
+        CreatedProdOrderLabelTxt: Label 'Production Order(s) created:\%1', Comment = '%1 = List of production order numbers created';
+        ModifiedProdOrderLabelTxt: Label 'Production Orders modified:\%1', Comment = '%1 = List of production order numbers modified';
     begin
-        TempReqLine := this.ProjectProdOrdersMgmt__TransferSourceReqLinesToLocalReqLines(Rec);
-        if TempReqLine.FindSet() then;
+        this.ProjectProdOrdersMgmt__TransferSourceReqLinesToLocalReqLines(Rec, TempReqLine);
+        if not TempReqLine.FindSet() then Error(NoDemandLinesLabelTxt);
 
         ProdOrderChoice := Enum::"Production Order Status"::"Firm Planned";
         this.OnAfterSetMfgCarrryOutActionFromProdOrderParameters(TempReqLine, ProdOrderChoice);
@@ -26,14 +30,17 @@ codeunit 71826212 ProjectProdOrdersMgmtUAS
             ProdOrder := ProdProjSrc.ProjectProdOrdersMgmt__ProductionHeaderExists(TempReqLine, ProdOrderChoice);
             if ProdOrder.IsEmpty() then begin
                 if ProdProjSrc.ProdOrderPlusProjSrcUAS__CreateProjectProductionOrderHeader(TempReqLine, ProdOrder, ProdOrderChoice) then
-                    CreatedProdOrders.AppendLine(ProdOrder."No.");
+                    if (Text.StrPos(CreatedProdOrders.ToText(), ProdOrder."No.") = 0) then CreatedProdOrders.AppendLine(ProdOrder."No.");
             end else begin
                 ProdProjSrc.ProjectProdOrdersMgmt__CreateProductionOrderLine(TempReqLine, ProdOrder);
-                ModifiedProdOrders.AppendLine(ProdOrder."No.")
+                if (Text.StrPos(CreatedProdOrders.ToText(), ProdOrder."No.") = 0) and (Text.StrPos(ModifiedProdOrders.ToText(), ProdOrder."No.") = 0) then
+                    ModifiedProdOrders.AppendLine(ProdOrder."No.");
             end;
         until TempReqLine.Next() = 0;
 
-        Message('Production Order(s) created:\%1' + '\' + 'Production Orders modified:\%2', CreatedProdOrders, ModifiedProdOrders);
+        if CreatedProdOrders.Length() > 0 then MessageLabelTxt.AppendLine(StrSubstNo(CreatedProdOrderLabelTxt, CreatedProdOrders));
+        if ModifiedProdOrders.Length() > 0 then MessageLabelTxt.AppendLine(StrSubstNo(ModifiedProdOrderLabelTxt, ModifiedProdOrders));
+        Message(MessageLabelTxt.ToText());
     end;
 
     /// <summary>
@@ -42,17 +49,23 @@ codeunit 71826212 ProjectProdOrdersMgmtUAS
     /// <param name="Rec">The external requisition line record to copy from.</param>
     /// <param name="ReqLine">The requisition line record containing the records to copy.</param>
     /// <param name="ShareTable">Indicates whether to share the temporary table.</param>
-    local procedure ProjectProdOrdersMgmt__TransferSourceReqLinesToLocalReqLines(var Rec: Record "Requisition Line") ReqLine: Record "Requisition Line"
+    local procedure ProjectProdOrdersMgmt__TransferSourceReqLinesToLocalReqLines(var Rec: Record "Requisition Line"; var ReqLine: Record "Requisition Line")
     var
         Helper: Codeunit ProjectProdPlanningHelperUAS;
     begin
         Clear(ReqLine);
+        Helper.ProjectProdPlanningHelper__CopyProdOrderReqLinesOver(Rec, ReqLine, 0, true);
+        ReqLine.Reset();
         Helper.ProjectProdPlanningHelper__CopyRequisuitionFilters(Rec, ReqLine, 187, 0);
         Helper.ProjectProdPlanningHelper__CopyRequisuitionFilters(Rec, ReqLine, 187, 187);
-        Helper.ProjectProdPlanningHelper__CopyProdOrderReqLinesOver(Rec, ReqLine, 0, false);
-        repeat
-            ReqLine."Planning Line Origin" := ReqLine."Planning Line Origin"::ProjectPlanningUAS;
-        until ReqLine.Next() = 0
+        if ReqLine.FindSet() then
+            repeat
+                ReqLine."Planning Line Origin" := ReqLine."Planning Line Origin"::ProjectPlanningUAS;
+                ReqLine.Modify()
+            until ReqLine.Next() = 0;
+        ReqLine.SetRange("Planning Line Origin", ReqLine."Planning Line Origin"::ProjectPlanningUAS);
+        ReqLine.SetFilter("No.", '<>''''');
+        ReqLine.SetFilter(Quantity, '<>0');
     end;
 
     /// <summary>
