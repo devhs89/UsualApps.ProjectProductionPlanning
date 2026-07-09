@@ -1,5 +1,7 @@
 namespace UsualApps.ProjectProductionPlanning;
 
+using Microsoft.Inventory.BOM;
+using Microsoft.Inventory.BOM.Tree;
 using Microsoft.Inventory.Item;
 using Microsoft.Inventory.Requisition;
 using Microsoft.Manufacturing.Document;
@@ -103,8 +105,6 @@ codeunit 71826213 ProdOrderPlusProjSrcUAS
         Clear(ProdOrder."Dimension Set ID");
         ProdOrder.UpdateDatetime();
         ProdOrder.Modify();
-        // Create the production order line for the requisition line and the newly created production order.
-        this.ProjectProdOrdersMgmt__CreateProductionOrderLine(ReqLine, ProdOrder);
         exit(ProdOrder.Count() > 0);
     end;
 
@@ -113,12 +113,34 @@ codeunit 71826213 ProdOrderPlusProjSrcUAS
     /// </summary>
     /// <param name="ReqLine">The requisition line record for which the production order line is being created.</param>
     /// <param name="ProdOrder"> The production order record to which the line will be added.</param>
-    internal procedure ProjectProdOrdersMgmt__CreateProductionOrderLine(var ReqLine: Record "Requisition Line"; var ProdOrder: Record "Production Order")
+    internal procedure ProjectProdOrdersMgmt__CreateProductionOrderLine(var ReqLine: Record "Requisition Line"; var ProdOrder: Record "Production Order"): Boolean
     var
         Item: Record Item;
         MfgAct: Codeunit "Mfg. Carry Out Action";
     begin
         if not Item.Get(ReqLine."No.") then Error('Item %1 not found.', ReqLine."No.");
         MfgAct.InsertProdOrderLine(ReqLine, ProdOrder, Item);
+        exit(true);
+    end;
+
+    local procedure ProjectProdOrdersMgmt__CreateBOMFromProductionOrderLine(var ReqLine: Record "Requisition Line"; var ProdOrder: Record "Production Order"; var ItemFilter: Record Item)
+    var
+        ProdLine: Record "Prod. Order Line";
+        BOMBuffer: Record "BOM Buffer";
+        CalcBOMTree: Codeunit "Calculate BOM Tree";
+        CalcMfgBOMTree: Codeunit "Mfg. Calculate BOM Tree";
+        TreeType: Enum "BOM Tree Type";
+        EntryNo: Integer;
+    begin
+        Clear(ProdLine);
+        Clear(EntryNo);
+
+        ProdLine.SetRange(Status, ProdOrder.Status);
+        ProdLine.SetRange("Prod. Order No.", ProdOrder."No.");
+        if not ProdLine.FindSet() then exit;
+
+        repeat
+            CalcMfgBOMTree.GenerateTreeForProdOrderLine(ProdLine, BOMBuffer, TreeType, ItemFilter, EntryNo, CalcBOMTree);
+        until ProdLine.Next() = 0;
     end;
 }

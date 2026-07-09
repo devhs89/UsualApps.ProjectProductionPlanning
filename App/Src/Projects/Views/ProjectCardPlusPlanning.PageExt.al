@@ -27,17 +27,15 @@ pageextension 71826210 ProjectCardPlusPlanningUAS extends "Job Card"
                     PlanningPage: Page ProjectProdPlanningUAS;
                 begin
                     Clear(TempUnplanDemand);
-                    Helper.ProjectProdPlanningHelper__SetDefaultJobPlanningFilterGroup(TempUnplanDemand, Rec, 187);
+                    Helper.ProjectProdPlanningHelper__SetDefaultUnplannedDemandFilterGroup(TempUnplanDemand, Rec."No.", 187);
                     GetUnplannedDemand.Run(TempUnplanDemand);
 
                     TempUnplanDemand.Reset();
-                    Helper.ProjectProdPlanningHelper__SetDefaultJobPlanningFilterGroup(TempUnplanDemand, Rec, 187);
+                    Helper.ProjectProdPlanningHelper__SetDefaultUnplannedDemandFilterGroup(TempUnplanDemand, Rec."No.", 187);
 
                     Clear(TempReqLine);
                     Helper.ProjectProdPlanningHelper__TransferUnplannedDemandToRequisitionLine(TempUnplanDemand, TempReqLine, 187);
 
-                    TempReqLine.Reset();
-                    Helper.ProjectProdPlanningHelper__SetDefaultReqLineFilterGroup(TempReqLine, 0, Database::"Job Planning Line", Rec."No.");
 
                     PlanningPage.LookupMode(true);
                     PlanningPage.TransferExternalReqLinesToSourceReqLines(TempReqLine, true);

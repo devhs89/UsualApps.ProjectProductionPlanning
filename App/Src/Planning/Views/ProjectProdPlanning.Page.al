@@ -225,11 +225,9 @@ page 71826210 ProjectProdPlanningUAS
         Helper: Codeunit ProjectProdPlanningHelperUAS;
     begin
         Clear(Rec);
-        Helper.ProjectProdPlanningHelper__CopyProdOrderReqLinesOver(ReqLine, Rec, 0, true);
-        Rec.Reset();
-        Helper.ProjectProdPlanningHelper__CopyRequisuitionFilters(ReqLine, Rec, 187, 0);
-        Helper.ProjectProdPlanningHelper__CopyRequisuitionFilters(ReqLine, Rec, 187, 187);
+        Helper.ProjectProdPlanningHelper__CopyProdOrderReqLinesOver(ReqLine, Rec, 187, 0, ShareTable);
         Rec.SetRange("Replenishment System", Rec."Replenishment System"::"Prod. Order");
+        Helper.ProjectProdPlanningHelper__CopyRequisuitionFilters(Rec, Rec, 0, 187);
     end;
 
     /// <summary>

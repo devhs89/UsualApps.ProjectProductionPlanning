@@ -1,6 +1,7 @@
 namespace UsualApps.ProjectProductionPlanning;
 
 using Microsoft.Inventory.Item;
+using Microsoft.Projects.Project.Planning;
 using Microsoft.Inventory.Planning;
 using Microsoft.Inventory.Requisition;
 using Microsoft.Projects.Project.Job;
@@ -13,13 +14,37 @@ codeunit 71826211 ProjectProdPlanningHelperUAS
     /// <param name="UnplanDemand">The unplanned demand record to set the filter on.</param>
     /// <param name="Job"> The job planning line record to use for filtering.</param>
     /// <param name="FilterGroup"> The filter group to use for setting the filters.</param>
-    internal procedure ProjectProdPlanningHelper__SetDefaultJobPlanningFilterGroup(var UnplanDemand: Record "Unplanned Demand"; Job: Record Job; FilterGroup: Integer)
+    internal procedure ProjectProdPlanningHelper__SetDefaultUnplannedDemandFilterGroup(var UnplanDemand: Record "Unplanned Demand"; JobNo: Code[20]; FilterGroup: Integer)
+    var
+        CurrFilterGroup: Integer;
     begin
+        CurrFilterGroup := UnplanDemand.FilterGroup();
         UnplanDemand.FilterGroup(FilterGroup);
         UnplanDemand.SetCurrentKey("Demand Type", "Demand Order No.");
         UnplanDemand.SetRange("Demand Type", "Demand Order Source Type"::"Job Demand".AsInteger());
-        UnplanDemand.SetRange("Demand Order No.", Job."No.");
-        UnplanDemand.FilterGroup(0);
+        UnplanDemand.SetRange("Demand Order No.", JobNo);
+        UnplanDemand.FilterGroup(CurrFilterGroup);
+    end;
+
+    /// <summary>
+    /// Sets the default filters on the requisition line record to filter for order planning lines based on the specified filter group.
+    /// </summary>
+    /// <param name="ReqLine">The requisition line record to set the filters on.</param>
+    /// <param name="FilterGroup">The filter group to use for setting the filters.</param>
+    internal procedure ProjectProdPlanningHelper__SetDefaultReqLineFilterGroup(var ReqLine: Record "Requisition Line"; FilterGroup: Integer; DemandType: Integer; DemandNo: Code[20])
+    var
+        CurrFilterGroup: Integer;
+    begin
+        CurrFilterGroup := ReqLine.FilterGroup();
+        ReqLine.FilterGroup(FilterGroup);
+        ReqLine.SetRange("Worksheet Template Name", '');
+        ReqLine.SetRange("Journal Batch Name", ReqLine.GetJnlBatchNameForOrderPlanning());
+        ReqLine.SetRange("User ID", UserId);
+        ReqLine.SetRange("Planning Line Origin", "Planning Line Origin Type"::"Order Planning");
+        ReqLine.SetRange("Replenishment System", ReqLine."Replenishment System"::"Prod. Order");
+        ReqLine.SetRange("Demand Type", DemandType);
+        ReqLine.SetRange("Demand Order No.", DemandNo);
+        ReqLine.FilterGroup(CurrFilterGroup);
     end;
 
     /// <summary>
@@ -141,27 +166,6 @@ codeunit 71826211 ProjectProdPlanningHelperUAS
     end;
 
     /// <summary>
-    /// Sets the default filters on the requisition line record to filter for order planning lines based on the specified filter group.
-    /// </summary>
-    /// <param name="ReqLine">The requisition line record to set the filters on.</param>
-    /// <param name="FilterGroup">The filter group to use for setting the filters.</param>
-    internal procedure ProjectProdPlanningHelper__SetDefaultReqLineFilterGroup(var ReqLine: Record "Requisition Line"; FilterGroup: Integer; DemandType: Integer; DemandNo: Code[20])
-    var
-        CurrFilterGroup: Integer;
-    begin
-        CurrFilterGroup := ReqLine.FilterGroup();
-        ReqLine.FilterGroup(FilterGroup);
-        ReqLine.SetRange("Worksheet Template Name", '');
-        ReqLine.SetRange("Journal Batch Name", ReqLine.GetJnlBatchNameForOrderPlanning());
-        ReqLine.SetRange("User ID", UserId);
-        ReqLine.SetRange("Planning Line Origin", "Planning Line Origin Type"::"Order Planning");
-        ReqLine.SetRange("Replenishment System", ReqLine."Replenishment System"::"Prod. Order");
-        ReqLine.SetRange("Demand Type", DemandType);
-        ReqLine.SetRange("Demand Order No.", DemandNo);
-        ReqLine.FilterGroup(CurrFilterGroup);
-    end;
-
-    /// <summary>
     /// Copies the filters from the specified requisition line record to another requisition line record based on the specified filter group.
     /// </summary>
     /// <param name="FromReqLine">The requisition line record to copy the filters from.</param>
@@ -181,9 +185,10 @@ codeunit 71826211 ProjectProdPlanningHelperUAS
     /// Transfers the unplanned demand records to the requisition line records, setting the supply quantity and dates accordingly.
     /// </summary>
     /// <param name="UnplanDemand">The unplanned demand record to transfer from.</param>
-    /// <param name="TempReqLine">The requisition line record to transfer the unplanned demand to.</param>
-    internal procedure ProjectProdPlanningHelper__TransferUnplannedDemandToRequisitionLine(var UnplanDemand: Record "Unplanned Demand"; var TempReqLine: Record "Requisition Line"; FilterGroup: Integer)
+    /// <param name="ReqLine">The requisition line record to transfer the unplanned demand to.</param>
+    internal procedure ProjectProdPlanningHelper__TransferUnplannedDemandToRequisitionLine(var UnplanDemand: Record "Unplanned Demand"; var ReqLine: Record "Requisition Line"; FilterGroup: Integer)
     var
+        PersistReqLine: Record "Requisition Line";
         DemandType: Enum "Unplanned Demand Type";
         DemandNo: Code[20];
     begin
@@ -197,15 +202,19 @@ codeunit 71826211 ProjectProdPlanningHelperUAS
         UnplanDemand.SetRange("Demand Order No.", DemandNo);
         UnplanDemand.SetFilter("Item No.", '<>''''');
         if UnplanDemand.FindSet(false) then begin
-            Clear(TempReqLine);
+            Clear(PersistReqLine);
             repeat
-                TempReqLine.TransferFromUnplannedDemand(UnplanDemand);
-                TempReqLine.SetSupplyQty(UnplanDemand."Quantity (Base)", UnplanDemand."Needed Qty. (Base)");
-                TempReqLine.SetSupplyDates(UnplanDemand."Demand Date");
-                TempReqLine."Planning Line Origin" := TempReqLine."Planning Line Origin"::"Order Planning";
-                if not TempReqLine.Insert(false) then Error('Failed to insert Requisition Line %1 for Item %2', TempReqLine."Line No.", TempReqLine."No.") else Commit();
+                PersistReqLine.TransferFromUnplannedDemand(UnplanDemand);
+                PersistReqLine.SetSupplyQty(UnplanDemand."Quantity (Base)", UnplanDemand."Needed Qty. (Base)");
+                PersistReqLine.SetSupplyDates(UnplanDemand."Demand Date");
+                if not PersistReqLine.Insert(true) then Error('Failed to insert Requisition Line %1 for Item %2', PersistReqLine."Line No.", PersistReqLine."No.") else Commit();
             until UnplanDemand.Next() = 0;
+            PersistReqLine.Reset();
+            this.ProjectProdPlanningHelper__SetDefaultReqLineFilterGroup(PersistReqLine, 0, Database::"Job Planning Line", DemandNo);
+            this.ProjectProdPlanningHelper__SetDefaultReqLineFilterGroup(PersistReqLine, 187, Database::"Job Planning Line", DemandNo);
+            ReqLine.Copy(PersistReqLine);
         end;
+
     end;
 
     /// <summary>
@@ -215,8 +224,17 @@ codeunit 71826211 ProjectProdPlanningHelperUAS
     /// <param name="ToReqLine">The requisition line record to copy to.</param>
     /// <param name="FilterGroup">The filter group to use for copying the records.</param>
     /// <param name="ShareTempTable">Indicates whether to share the temporary table.</param>
-    internal procedure ProjectProdPlanningHelper__CopyProdOrderReqLinesOver(var FromReqLine: Record "Requisition Line"; var ToReqLine: Record "Requisition Line"; FilterGroup: Integer; ShareTempTable: Boolean)
+    internal procedure ProjectProdPlanningHelper__CopyProdOrderReqLinesOver(var FromReqLine: Record "Requisition Line"; var ToReqLine: Record "Requisition Line"; FromFilterGroup: Integer; ToFilterGroup: Integer; ShareTempTable: Boolean)
+    var
+        CurrFromFilterGroup: Integer;
+        CurToFilterGroup: Integer;
     begin
-        ToReqLine.Copy(FromReqLine, ShareTempTable)
+        CurrFromFilterGroup := FromReqLine.FilterGroup();
+        CurToFilterGroup := ToReqLine.FilterGroup();
+        FromReqLine.FilterGroup(FromFilterGroup);
+        ToReqLine.FilterGroup(ToFilterGroup);
+        ToReqLine.Copy(FromReqLine, ShareTempTable);
+        FromReqLine.FilterGroup(CurrFromFilterGroup);
+        FromReqLine.FilterGroup(CurToFilterGroup);
     end;
 }
