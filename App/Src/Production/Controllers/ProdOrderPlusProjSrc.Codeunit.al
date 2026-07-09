@@ -3,70 +3,120 @@ namespace UsualApps.ProjectProductionPlanning;
 using Microsoft.Inventory.Item;
 using Microsoft.Inventory.Requisition;
 using Microsoft.Manufacturing.Document;
+using Microsoft.Manufacturing.Setup;
 using Microsoft.Projects.Project.Job;
 
 codeunit 71826213 ProdOrderPlusProjSrcUAS
 {
-    // Event raised after the production order is initiated with the requisition line.
-    [EventSubscriber(ObjectType::Codeunit, Codeunit::"Mfg. Carry Out Action", OnInsertProdOrderWithReqLine, '', false, false)]
-    local procedure MfgCarryOutAction_OnInsertProdOrderWithReqLine(var ProductionOrder: Record "Production Order"; var RequisitionLine: Record "Requisition Line")
+    /// <summary>
+    /// Checks if a production order header exists for the given requisition line and production order choice.
+    /// </summary>
+    /// <param name="ReqLine">The requisition line record to check against.</param>
+    /// <param name="ProdOrderChoice">The choice of production order status (Planned, Firm Planned, etc.).</param>
+    /// <returns>The production order record if it exists; otherwise, an empty record.</returns>
+    internal procedure ProjectProdOrdersMgmt__ProductionHeaderExists(var ReqLine: Record "Requisition Line"; ProdOrderChoice: Enum "Planning Create Prod. Order") ProdOrder: Record "Production Order"
     var
-        Job: Record Job;
+        ExistProd: Record "Production Order";
     begin
-        if RequisitionLine."Planning Line Origin" <> RequisitionLine."Planning Line Origin"::ProjectPlanningUAS then exit;
-        if not Job.Get(RequisitionLine."Demand Order No.") then Error('The job number %1 does not exist.', RequisitionLine."Demand Order No.");
-        this.ProdOrderPlusProjSrcUAS__InsertProjectProdOrderWithReqLine(ProductionOrder, RequisitionLine, Job);
-    end;
+        ExistProd.SetCurrentKey(Status, "Source Type", "Source No.");
 
-    // Event raised after the production order is initiated with the requisition line to check if a production order already exists for the job.
-    [EventSubscriber(ObjectType::Codeunit, Codeunit::"Mfg. Carry Out Action", OnInsertProdOrderOnAfterFindTempProdOrder, '', false, false)]
-    local procedure MfgCarryOutAction_OnInsertProdOrderOnAfterFindTempProdOrder(var ReqLine: Record "Requisition Line"; var ProdOrder: Record "Production Order"; var HeaderExists: Boolean; var Item: Record Item)
-    var
-        ExistignProd: Record "Production Order";
-    begin
-        if ReqLine."Planning Line Origin" <> ReqLine."Planning Line Origin"::ProjectPlanningUAS then exit;
-        ExistignProd.SetCurrentKey(Status, "Source Type", "Source No.");
-        ExistignProd.SetRange(Status, "Production Order Status"::"Firm Planned");
-        ExistignProd.SetRange("Source Type", "Prod. Order Source Type"::ProjectHeaderUAS);
-        ExistignProd.SetRange("Source No.", ReqLine."Demand Order No.");
-        if ExistignProd.FindFirst() then begin
-            ProdOrder.Copy(ExistignProd);
-            HeaderExists := true;
+        case ProdOrderChoice of
+            ProdOrderChoice::Planned:
+                ExistProd.SetRange(Status, "Production Order Status"::Planned);
+            ProdOrderChoice::"Firm Planned", ProdOrderChoice::"Firm Planned & Print":
+                ExistProd.SetRange(Status, "Production Order Status"::"Firm Planned");
+            else
+                exit;
         end;
+        ExistProd.SetRange("Source Type", "Prod. Order Source Type"::ProjectHeaderUAS);
+        ExistProd.SetRange("Source No.", ReqLine."Demand Order No.");
+        if ProdOrder.FindFirst() then;
+        exit(ProdOrder)
     end;
 
     /// <summary>
-    /// Inserts a production order with the requisition line and job information.
+    /// Inserts a new project production order header record based on the provided requisition line and production order choice.
     /// </summary>
-    /// <param name="Prod">The production order record to insert.</param>
     /// <param name="ReqLine">The requisition line record associated with the production order.</param>
-    /// <param name="Job">The job record associated with the production order.</param>
-    local procedure ProdOrderPlusProjSrcUAS__InsertProjectProdOrderWithReqLine(var Prod: Record "Production Order"; var ReqLine: Record "Requisition Line"; Job: Record Job)
+    /// <param name="ProdOrder">The production order record to insert.</param>
+    /// <param name="ProdOrderChoice">The choice of production order status (Planned, Firm Planned, etc.).</param>
+    /// <returns>True if the production order header was successfully created; otherwise, false.</returns>
+    internal procedure ProdOrderPlusProjSrcUAS__CreateProjectProductionOrderHeader(var ReqLine: Record "Requisition Line"; var ProdOrder: Record "Production Order"; ProdOrderChoice: Enum "Planning Create Prod. Order"): Boolean
+    var
+        ManufacturingSetup: Record "Manufacturing Setup";
+        Job: Record Job;
     begin
-        Prod."Source Type" := Prod."Source Type"::ProjectHeaderUAS;
-        Prod."Source No." := Job."No.";
-        Prod.Validate(Description, Job.Description);
-        Prod."Description 2" := Job."Description 2";
-        Clear(Prod."Variant Code");
-        Prod."Creation Date" := Today;
-        Prod."Last Date Modified" := Today;
-        Clear(Prod."Inventory Posting Group");
-        Clear(Prod."Gen. Prod. Posting Group");
-        Prod."Due Date" := ReqLine."Due Date";
-        Prod."Starting Time" := ReqLine."Starting Time";
-        Prod."Starting Date" := ReqLine."Starting Date";
-        Prod."Ending Time" := ReqLine."Ending Time";
-        Prod."Ending Date" := ReqLine."Ending Date";
-        Prod."Location Code" := Job."Location Code";
-        Prod."Bin Code" := Job."Bin Code";
-        Prod."Low-Level Code" := ReqLine."Low-Level Code";
-        Clear(Prod."Routing No.");
-        Prod.Quantity := 1;
-        Clear(Prod."Unit Cost");
-        Clear(Prod."Cost Amount");
-        Prod."Shortcut Dimension 1 Code" := Job."Global Dimension 1 Code";
-        Prod."Shortcut Dimension 2 Code" := Job."Global Dimension 2 Code";
-        Clear(Prod."Dimension Set ID");
-        Prod.UpdateDatetime();
+        // Validate the requisition line and ensure that the associated job exists.
+        if not Job.Get(ReqLine."Demand Order No.") then Error('Job %1 not found.', ReqLine."Demand Order No.");
+
+        // Check if the manufacturing setup is configured correctly for the specified production order choice.
+        if not ManufacturingSetup.Get() then Error('Manufacturing Setup not found.');
+        case ProdOrderChoice of
+            ProdOrderChoice::Planned:
+                ManufacturingSetup.TestField("Planned Order Nos.");
+            ProdOrderChoice::"Firm Planned",
+            ProdOrderChoice::"Firm Planned & Print":
+                ManufacturingSetup.TestField("Firm Planned Order Nos.");
+            else
+                Error('Invalid production order choice: %1', ProdOrderChoice);
+        end;
+
+        // Initialize the production order record and set the appropriate status based on the production order choice.
+        Clear(ProdOrder);
+        ProdOrder.Init();
+
+        case ProdOrderChoice of
+            ProdOrderChoice::Planned:
+                ProdOrder.Status := "Production Order Status"::Planned;
+            ProdOrderChoice::"Firm Planned", ProdOrderChoice::"Firm Planned & Print":
+                ProdOrder.Status := "Production Order Status"::"Firm Planned";
+            else
+                Error('Invalid production order choice: %1', ProdOrderChoice);
+        end;
+
+        ProdOrder."No. Series" := ProdOrder.GetNoSeriesCode();
+        if ProdOrder."No. Series" = ReqLine."No. Series" then ProdOrder."No." := ReqLine."Ref. Order No.";
+        ProdOrder.Insert(true);
+        ProdOrder."Source Type" := ProdOrder."Source Type"::ProjectHeaderUAS;
+        ProdOrder."Source No." := Job."No.";
+        ProdOrder.Validate(Description, Job.Description);
+        ProdOrder."Description 2" := Job."Description 2";
+        Clear(ProdOrder."Variant Code");
+        ProdOrder."Creation Date" := Today;
+        ProdOrder."Last Date Modified" := Today;
+        Clear(ProdOrder."Inventory Posting Group");
+        Clear(ProdOrder."Gen. Prod. Posting Group");
+        ProdOrder."Due Date" := ReqLine."Due Date";
+        ProdOrder."Starting Time" := ReqLine."Starting Time";
+        ProdOrder."Starting Date" := ReqLine."Starting Date";
+        ProdOrder."Ending Time" := ReqLine."Ending Time";
+        ProdOrder."Ending Date" := ReqLine."Ending Date";
+        ProdOrder."Location Code" := Job."Location Code";
+        ProdOrder."Bin Code" := Job."Bin Code";
+        ProdOrder."Low-Level Code" := ReqLine."Low-Level Code";
+        Clear(ProdOrder."Routing No.");
+        ProdOrder.Quantity := 1;
+        Clear(ProdOrder."Unit Cost");
+        Clear(ProdOrder."Cost Amount");
+        ProdOrder."Shortcut Dimension 1 Code" := Job."Global Dimension 1 Code";
+        ProdOrder."Shortcut Dimension 2 Code" := Job."Global Dimension 2 Code";
+        Clear(ProdOrder."Dimension Set ID");
+        ProdOrder.UpdateDatetime();
+        ProdOrder.Modify();
+        exit(ProdOrder.Count() > 0);
+    end;
+
+    /// <summary>
+    /// Creates a production order line for the specified requisition line and production order.
+    /// </summary>
+    /// <param name="ReqLine">The requisition line record for which the production order line is being created.</param>
+    /// <param name="ProdOrder"> The production order record to which the line will be added.</param>
+    internal procedure ProjectProdOrdersMgmt__CreateProductionOrderLine(var ReqLine: Record "Requisition Line"; var ProdOrder: Record "Production Order")
+    var
+        Item: Record Item;
+        MfgAct: Codeunit "Mfg. Carry Out Action";
+    begin
+        if not Item.Get(ReqLine."No.") then Error('Item %1 not found.', ReqLine."No.");
+        MfgAct.InsertProdOrderLine(ReqLine, ProdOrder, Item);
     end;
 }
