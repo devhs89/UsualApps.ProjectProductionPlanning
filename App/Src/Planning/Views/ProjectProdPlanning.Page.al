@@ -4,17 +4,17 @@ using Microsoft.Inventory.Item;
 using Microsoft.Inventory.Requisition;
 using Microsoft.Manufacturing.ProductionBOM;
 using Microsoft.Manufacturing.Routing;
+using Microsoft.Projects.Project.Job;
 
 page 71826210 ProjectProdPlanningUAS
 {
-    Caption = 'Create Project Production Orders';
+    ApplicationArea = Planning;
+    Caption = 'Project Planning';
+    InsertAllowed = false;
+    PageType = Worksheet;
     SourceTable = "Requisition Line";
     SourceTableTemporary = true;
-    ApplicationArea = Planning;
-    PageType = Worksheet;
-    InsertAllowed = false;
-    Extensible = true;
-    PromotedActionCategories = 'New,Process,Report,Home,Others';
+    UsageCategory = None;
 
     layout
     {
@@ -191,43 +191,62 @@ page 71826210 ProjectProdPlanningUAS
         }
     }
 
-    trigger OnInit()
-    begin
-        if Rec.FindSet() then;
-    end;
-
-    trigger OnOpenPage()
     var
-        NoRecNotify: Notification;
-        LabelTxt: Label 'All items for the project are available.';
-    begin
-        if Rec.Count = 0 then begin
-            NoRecNotify.Scope := NotificationScope::LocalScope;
-            NoRecNotify.Message(LabelTxt);
-            NoRecNotify.Send();
-        end;
-    end;
+        Job: Record Job;
 
-    trigger OnDeleteRecord(): Boolean
+    internal procedure SetUnplannedDemandLines(JobNo: Code[20])
     begin
-        Rec.Delete(false);
+        if not this.Job.Get(JobNo) then Error('Job %1 not found.', JobNo);
+        this.CalculatePlan(this.Job."No.");
         CurrPage.Update(false);
-        exit(false);
     end;
 
-    /// <summary>
-    /// Copy the requisition lines from one record to another.
-    /// </summary>
-    /// <param name="ReqLine">The requisition line record containing the records to copy.</param>
-    /// <param name="ShareTable">Indicates whether to share the temporary table.</param>
-    internal procedure TransferExternalReqLinesToSourceReqLines(var ReqLine: Record "Requisition Line"; ShareTable: Boolean)
+    internal procedure GetTemporaryRequisitionLine(var ReqLine: Record "Requisition Line")
     var
         Helper: Codeunit ProjectProdPlanningHelperUAS;
     begin
-        Clear(Rec);
-        Helper.ProjectProdPlanningHelper__CopyProdOrderReqLinesOver(ReqLine, Rec, 187, 0, ShareTable);
-        Rec.SetRange("Replenishment System", Rec."Replenishment System"::"Prod. Order");
-        Helper.ProjectProdPlanningHelper__CopyRequisuitionFilters(Rec, Rec, 0, 187);
+        Clear(ReqLine);
+        Rec.Reset();
+        Helper.SetDefaultReqLineFilters(Rec, 0, this.Job."No.", true);
+        if Rec.FindSet() then ReqLine.Copy(Rec, true);
+    end;
+
+    local procedure CalculatePlan(JobNo: Code[20])
+    var
+        ReqLine: Record "Requisition Line";
+        OrderPlanningMgt: Codeunit "Order Planning Mgt.";
+        DemandOrderFilter: Enum "Demand Order Source Type";
+    begin
+        Rec.Reset();
+        Rec.DeleteAll();
+
+        DemandOrderFilter := DemandOrderFilter::"Job Demand";
+
+        Clear(OrderPlanningMgt);
+        OrderPlanningMgt.SetDemandType(DemandOrderFilter);
+        OrderPlanningMgt.GetOrdersToPlan(ReqLine);
+
+        this.SetTemporaryRequisitionLine(JobNo);
+    end;
+
+    local procedure SetTemporaryRequisitionLine(JobNo: Code[20])
+    var
+        ReqLine: Record "Requisition Line";
+        Helper: Codeunit ProjectProdPlanningHelperUAS;
+    begin
+        Rec.DeleteAll();
+        ReqLine.Reset();
+        Helper.SetDefaultReqLineFilters(ReqLine, 0, JobNo, false);
+
+        if ReqLine.FindSet() then
+            repeat
+                Rec := ReqLine;
+                Rec.Insert();
+            until ReqLine.Next() = 0;
+
+        Rec.Reset();
+        Helper.SetDefaultReqLineFilters(Rec, 0, JobNo, false);
+        Helper.SetDefaultReqLineFilters(Rec, 187, JobNo, false);
     end;
 
     /// <summary>

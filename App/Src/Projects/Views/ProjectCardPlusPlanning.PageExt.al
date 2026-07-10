@@ -1,9 +1,7 @@
 namespace UsualApps.ProjectProductionPlanning;
 
-using Microsoft.Inventory.Planning;
 using Microsoft.Inventory.Requisition;
 using Microsoft.Projects.Project.Job;
-using Microsoft.Projects.Project.Planning;
 
 pageextension 71826210 ProjectCardPlusPlanningUAS extends "Job Card"
 {
@@ -19,29 +17,31 @@ pageextension 71826210 ProjectCardPlusPlanningUAS extends "Job Card"
                 ApplicationArea = Jobs;
                 trigger OnAction()
                 var
-                    TempUnplanDemand: Record "Unplanned Demand" temporary;
                     TempReqLine: Record "Requisition Line" temporary;
-                    GetUnplannedDemand: Codeunit "Get Unplanned Demand";
-                    ProjProdMgmt: Codeunit ProjectProdOrdersMgmtUAS;
+                    MfgTemp: Record "Manufacturing User Template";
+                    MakeSupply: Codeunit "Make Supply Orders (Yes/No)";
                     Helper: Codeunit ProjectProdPlanningHelperUAS;
-                    PlanningPage: Page ProjectProdPlanningUAS;
+                    ProjProdPage: Page ProjectProdPlanningUAS;
                 begin
-                    Clear(TempUnplanDemand);
-                    Helper.ProjectProdPlanningHelper__SetDefaultUnplannedDemandFilterGroup(TempUnplanDemand, Rec."No.", 187);
-                    GetUnplannedDemand.Run(TempUnplanDemand);
+                    ProjProdPage.SetUnplannedDemandLines(Rec."No.");
+                    ProjProdPage.LookupMode(true);
+                    if ProjProdPage.RunModal() <> Action::LookupOK then exit;
 
-                    TempUnplanDemand.Reset();
-                    Helper.ProjectProdPlanningHelper__SetDefaultUnplannedDemandFilterGroup(TempUnplanDemand, Rec."No.", 187);
+                    ProjProdPage.GetTemporaryRequisitionLine(TempReqLine);
 
-                    Clear(TempReqLine);
-                    Helper.ProjectProdPlanningHelper__TransferUnplannedDemandToRequisitionLine(TempUnplanDemand, TempReqLine, 187);
+                    Clear(MfgTemp);
+                    if MfgTemp.Get(UserId) then begin
+                        Helper.InitializeManufacturingUserTemplate(MfgTemp, CopyStr(UserId, 1, 50));
+                        MfgTemp.Modify(true);
+                    end else begin
+                        Helper.InitializeManufacturingUserTemplate(MfgTemp, CopyStr(UserId, 1, 50));
+                        MfgTemp.Insert(true);
+                    end;
 
-
-                    PlanningPage.LookupMode(true);
-                    PlanningPage.TransferExternalReqLinesToSourceReqLines(TempReqLine, true);
-                    if PlanningPage.RunModal() <> Action::LookupOK then exit;
-
-                    ProjProdMgmt.Run(TempReqLine);
+                    MakeSupply.SetManufUserTemplate(MfgTemp);
+                    MakeSupply.SetBlockForm();
+                    MakeSupply.Run(TempReqLine);
+                    if MakeSupply.ActionMsgCarriedOut() then Message('Production orders have been created for the project.');
                 end;
             }
         }
