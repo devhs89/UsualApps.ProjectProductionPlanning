@@ -5,7 +5,7 @@ using Microsoft.Projects.Project.Planning;
 
 codeunit 71826211 ProjectProdPlanningHelperUAS
 {
-    internal procedure SetDefaultReqLineFilters(var ReqLine: Record "Requisition Line"; FilterGroup: Integer; DemandNo: Code[20]; FilterBlanks: Boolean)
+    internal procedure SetDefaultReqLineFilters(var ReqLine: Record "Requisition Line"; FilterGroup: Integer; DemandNo: Code[20])
     begin
         ReqLine.FilterGroup(FilterGroup);
         ReqLine.SetRange("User ID", UserId);
@@ -13,10 +13,7 @@ codeunit 71826211 ProjectProdPlanningHelperUAS
         ReqLine.SetRange("Demand Type", Database::"Job Planning Line");
         ReqLine.SetRange("Demand Order No.", DemandNo);
         ReqLine.SetRange("Replenishment System", ReqLine."Replenishment System"::"Prod. Order");
-        if FilterBlanks then begin
-            ReqLine.Setfilter("No.", '<>''''');
-            ReqLine.SetFilter(Quantity, '<>0');
-        end;
+        ReqLine.Setfilter("Line No.", '<>0');
         ReqLine.FilterGroup(0);
     end;
 

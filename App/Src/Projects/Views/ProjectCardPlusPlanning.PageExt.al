@@ -17,30 +17,36 @@ pageextension 71826210 ProjectCardPlusPlanningUAS extends "Job Card"
                 ApplicationArea = Jobs;
                 trigger OnAction()
                 var
-                    TempReqLine: Record "Requisition Line" temporary;
+                    ReqLine: Record "Requisition Line";
                     MfgTemp: Record "Manufacturing User Template";
                     MakeSupply: Codeunit "Make Supply Orders (Yes/No)";
                     Helper: Codeunit ProjectProdPlanningHelperUAS;
                     ProjProdPage: Page ProjectProdPlanningUAS;
                 begin
-                    ProjProdPage.SetUnplannedDemandLines(Rec."No.");
+                    ProjProdPage.SetJob(Rec);
+                    ProjProdPage.SetUnplannedDemandLines(ReqLine);
                     ProjProdPage.LookupMode(true);
                     if ProjProdPage.RunModal() <> Action::LookupOK then exit;
 
-                    ProjProdPage.GetTemporaryRequisitionLine(TempReqLine);
+                    ProjProdPage.GetRequisitionLines(ReqLine);
+                    ReqLine.SetFilter(Quantity, '<>0');
+                    if not ReqLine.FindSet() then begin
+                        Message('All production requirements for this project have already been planned. No production orders need to be created.');
+                        exit;
+                    end;
 
                     Clear(MfgTemp);
                     if MfgTemp.Get(UserId) then begin
                         Helper.InitializeManufacturingUserTemplate(MfgTemp, CopyStr(UserId, 1, 50));
-                        MfgTemp.Modify(true);
+                        MfgTemp.Modify();
                     end else begin
                         Helper.InitializeManufacturingUserTemplate(MfgTemp, CopyStr(UserId, 1, 50));
-                        MfgTemp.Insert(true);
+                        MfgTemp.Insert();
                     end;
 
                     MakeSupply.SetManufUserTemplate(MfgTemp);
                     MakeSupply.SetBlockForm();
-                    MakeSupply.Run(TempReqLine);
+                    MakeSupply.Run(ReqLine);
                     if MakeSupply.ActionMsgCarriedOut() then Message('Production orders have been created for the project.');
                 end;
             }

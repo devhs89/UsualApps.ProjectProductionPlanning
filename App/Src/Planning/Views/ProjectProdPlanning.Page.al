@@ -13,8 +13,8 @@ page 71826210 ProjectProdPlanningUAS
     InsertAllowed = false;
     PageType = Worksheet;
     SourceTable = "Requisition Line";
-    SourceTableTemporary = true;
     UsageCategory = None;
+    DataCaptionExpression = this.SetDataCaption();
 
     layout
     {
@@ -26,10 +26,9 @@ page 71826210 ProjectProdPlanningUAS
                 {
                     ToolTip = 'Specifies the date when the order is due.';
                 }
-                field(Status; Rec.Status)
+                field("Order Date"; Rec."Order Date")
                 {
-                    ToolTip = 'Specifies the status of the demand.';
-                    Visible = false;
+                    ToolTip = 'Specifies the date when the order was placed.';
                 }
                 field("Demand Date"; Rec."Demand Date")
                 {
@@ -95,10 +94,6 @@ page 71826210 ProjectProdPlanningUAS
                 {
                     ToolTip = 'Specifies the unit of measure code for the demand quantity.';
                     Visible = false;
-                }
-                field("Order Date"; Rec."Order Date")
-                {
-                    ToolTip = 'Specifies the date when the order was placed.';
                 }
             }
         }
@@ -194,59 +189,52 @@ page 71826210 ProjectProdPlanningUAS
     var
         Job: Record Job;
 
-    internal procedure SetUnplannedDemandLines(JobNo: Code[20])
+    internal procedure SetJob(JobRecord: Record Job)
     begin
-        if not this.Job.Get(JobNo) then Error('Job %1 not found.', JobNo);
-        this.CalculatePlan(this.Job."No.");
+        if not this.Job.Get(JobRecord."No.") then Error('Job %1 not found.', JobRecord."No.");
+    end;
+
+    internal procedure SetUnplannedDemandLines(var ReqLine: Record "Requisition Line")
+    begin
+        if not this.IsJobSet() then Error('Job is not set. Please contact your administrator.');
+        this.CalculatePlan(ReqLine, this.Job."No.");
         CurrPage.Update(false);
     end;
 
-    internal procedure GetTemporaryRequisitionLine(var ReqLine: Record "Requisition Line")
+    internal procedure GetRequisitionLines(var ReqLine: Record "Requisition Line")
     var
         Helper: Codeunit ProjectProdPlanningHelperUAS;
     begin
         Clear(ReqLine);
         Rec.Reset();
-        Helper.SetDefaultReqLineFilters(Rec, 0, this.Job."No.", true);
-        if Rec.FindSet() then ReqLine.Copy(Rec, true);
+        Helper.SetDefaultReqLineFilters(Rec, 0, this.Job."No.");
+        if Rec.FindSet() then ReqLine.Copy(Rec);
     end;
 
-    local procedure CalculatePlan(JobNo: Code[20])
-    var
-        ReqLine: Record "Requisition Line";
-        OrderPlanningMgt: Codeunit "Order Planning Mgt.";
-        DemandOrderFilter: Enum "Demand Order Source Type";
+    local procedure IsJobSet(): Boolean
     begin
-        Rec.Reset();
-        Rec.DeleteAll();
-
-        DemandOrderFilter := DemandOrderFilter::"Job Demand";
-
-        Clear(OrderPlanningMgt);
-        OrderPlanningMgt.SetDemandType(DemandOrderFilter);
-        OrderPlanningMgt.GetOrdersToPlan(ReqLine);
-
-        this.SetTemporaryRequisitionLine(JobNo);
+        exit(not this.Job.IsEmpty());
     end;
 
-    local procedure SetTemporaryRequisitionLine(JobNo: Code[20])
+    local procedure SetDataCaption(): Text
+    begin
+        exit(this.Job."No." + ' ∙ ' + this.Job.Description);
+    end;
+
+    local procedure CalculatePlan(var ReqLine: Record "Requisition Line"; JobNo: Code[20])
     var
-        ReqLine: Record "Requisition Line";
+        OrderPlanningMgt: Codeunit "Order Planning Mgt.";
         Helper: Codeunit ProjectProdPlanningHelperUAS;
     begin
-        Rec.DeleteAll();
+        Clear(ReqLine);
+        Clear(OrderPlanningMgt);
+        OrderPlanningMgt.PlanSpecificJob(ReqLine, Rec."No.");
+
         ReqLine.Reset();
-        Helper.SetDefaultReqLineFilters(ReqLine, 0, JobNo, false);
-
-        if ReqLine.FindSet() then
-            repeat
-                Rec := ReqLine;
-                Rec.Insert();
-            until ReqLine.Next() = 0;
-
-        Rec.Reset();
-        Helper.SetDefaultReqLineFilters(Rec, 0, JobNo, false);
-        Helper.SetDefaultReqLineFilters(Rec, 187, JobNo, false);
+        Helper.SetDefaultReqLineFilters(ReqLine, 0, JobNo);
+        Helper.SetDefaultReqLineFilters(ReqLine, 187, JobNo);
+        Rec.Copy(ReqLine);
+        Rec.FindSet();
     end;
 
     /// <summary>
@@ -257,7 +245,7 @@ page 71826210 ProjectProdPlanningUAS
         if Rec.FindSet(true) then
             repeat
                 Rec.Validate("Reserve", (not Rec.Reserve));
-                if Rec.Modify(true) then;
+                Rec.Modify();
             until Rec.Next() = 0;
     end;
 
@@ -269,7 +257,7 @@ page 71826210 ProjectProdPlanningUAS
         if Rec.FindSet(true) then
             repeat
                 Rec.Validate(Quantity, (Rec.Quantity = 0 ? Rec."Needed Quantity" : 0));
-                if Rec.Modify(true) then;
+                Rec.Modify();
             until Rec.Next() = 0;
     end;
 }
