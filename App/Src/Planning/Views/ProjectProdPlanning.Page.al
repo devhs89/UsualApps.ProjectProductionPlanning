@@ -15,6 +15,7 @@ page 71826210 ProjectProdPlanningUAS
     SourceTable = "Requisition Line";
     UsageCategory = None;
     DataCaptionExpression = this.SetDataCaption();
+    PromotedActionCategories = 'New, Process, Report, Home, Others';
 
     layout
     {
@@ -207,8 +208,9 @@ page 71826210 ProjectProdPlanningUAS
     begin
         Clear(ReqLine);
         Rec.Reset();
-        Helper.SetDefaultReqLineFilters(Rec, 0, this.Job."No.");
-        if Rec.FindSet() then ReqLine.Copy(Rec);
+        Helper.ProjectProdPlanningHelper__SetDefaultReqLineFilters(Rec, 0, this.Job."No.");
+        Rec.FindSet();
+        ReqLine.Copy(Rec);
     end;
 
     local procedure IsJobSet(): Boolean
@@ -231,8 +233,8 @@ page 71826210 ProjectProdPlanningUAS
         OrderPlanningMgt.PlanSpecificJob(ReqLine, Rec."No.");
 
         ReqLine.Reset();
-        Helper.SetDefaultReqLineFilters(ReqLine, 0, JobNo);
-        Helper.SetDefaultReqLineFilters(ReqLine, 187, JobNo);
+        Helper.ProjectProdPlanningHelper__SetDefaultReqLineFilters(ReqLine, 0, JobNo);
+        Helper.ProjectProdPlanningHelper__SetDefaultReqLineFilters(ReqLine, 187, JobNo);
         Rec.Copy(ReqLine);
         Rec.FindSet();
     end;

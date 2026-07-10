@@ -18,9 +18,7 @@ pageextension 71826210 ProjectCardPlusPlanningUAS extends "Job Card"
                 trigger OnAction()
                 var
                     ReqLine: Record "Requisition Line";
-                    MfgTemp: Record "Manufacturing User Template";
-                    MakeSupply: Codeunit "Make Supply Orders (Yes/No)";
-                    Helper: Codeunit ProjectProdPlanningHelperUAS;
+                    ProdMdmt: Codeunit ProjectSourceProdOrderMgmtUAS;
                     ProjProdPage: Page ProjectProdPlanningUAS;
                 begin
                     ProjProdPage.SetJob(Rec);
@@ -35,19 +33,7 @@ pageextension 71826210 ProjectCardPlusPlanningUAS extends "Job Card"
                         exit;
                     end;
 
-                    Clear(MfgTemp);
-                    if MfgTemp.Get(UserId) then begin
-                        Helper.InitializeManufacturingUserTemplate(MfgTemp, CopyStr(UserId, 1, 50));
-                        MfgTemp.Modify();
-                    end else begin
-                        Helper.InitializeManufacturingUserTemplate(MfgTemp, CopyStr(UserId, 1, 50));
-                        MfgTemp.Insert();
-                    end;
-
-                    MakeSupply.SetManufUserTemplate(MfgTemp);
-                    MakeSupply.SetBlockForm();
-                    MakeSupply.Run(ReqLine);
-                    if MakeSupply.ActionMsgCarriedOut() then Message('Production orders have been created for the project.');
+                    ProdMdmt.Run(ReqLine);
                 end;
             }
         }
