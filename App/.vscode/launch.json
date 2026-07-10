@@ -7,12 +7,13 @@
       "type": "al",
       "environmentType": "Sandbox",
       "environmentName": "Sandbox-UsualApps",
-      "startupObjectId": 22,
+      "startupObjectId": 89,
       "startupObjectType": "Page",
       "breakOnError": "All",
       "launchBrowser": true,
       "enableLongRunningSqlStatements": true,
       "enableSqlInformationDebugger": true
+      // "schemaUpdateMode": "ForceSync"
     }
   ]
 }
