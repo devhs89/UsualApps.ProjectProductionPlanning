@@ -190,18 +190,30 @@ page 71826210 ProjectProdPlanningUAS
     var
         Job: Record Job;
 
+    /// <summary>
+    /// Sets the job record for the page based on the provided job record. If the job is not found, an error message is displayed.
+    /// </summary>
+    /// <param name="JobRecord">The job record to be set for the page.</param>
     internal procedure SetJob(JobRecord: Record Job)
     begin
         if not this.Job.Get(JobRecord."No.") then Error('Job %1 not found.', JobRecord."No.");
     end;
 
+    /// <summary>
+    /// Calculates the plan for the specified job and updates the requisition line records accordingly, then refreshes the page to reflect the changes.
+    /// </summary>
+    /// <param name="ReqLine">The requisition line record to be updated.</param>
     internal procedure SetUnplannedDemandLines(var ReqLine: Record "Requisition Line")
     begin
-        if not this.IsJobSet() then Error('Job is not set. Please contact your administrator.');
+        if this.Job."No." = '' then Error('Job is not set. Please contact your administrator.');
         this.CalculatePlan(ReqLine, this.Job."No.");
         CurrPage.Update(false);
     end;
 
+    /// <summary>
+    /// Retrieves the requisition line records associated with the specified job and populates the provided record variable with the results.
+    /// </summary>
+    /// <param name="ReqLine">The requisition line record variable that will be populated with the retrieved records.</param>
     internal procedure GetRequisitionLines(var ReqLine: Record "Requisition Line")
     var
         Helper: Codeunit ProjectProdPlanningHelperUAS;
@@ -213,16 +225,20 @@ page 71826210 ProjectProdPlanningUAS
         ReqLine.Copy(Rec);
     end;
 
-    local procedure IsJobSet(): Boolean
-    begin
-        exit(not this.Job.IsEmpty());
-    end;
-
+    /// <summary>
+    /// Sets the data caption for the page based on the job number and description.
+    /// </summary>
+    /// <returns>A text string representing the data caption.</returns>
     local procedure SetDataCaption(): Text
     begin
         exit(this.Job."No." + ' ∙ ' + this.Job.Description);
     end;
 
+    /// <summary>
+    /// Calculates the plan for the specified job and updates the requisition line records accordingly.
+    /// </summary>
+    /// <param name="ReqLine">The requisition line record to be updated.</param>
+    /// <param name="JobNo">The job number for which the plan is to be calculated.</param>
     local procedure CalculatePlan(var ReqLine: Record "Requisition Line"; JobNo: Code[20])
     var
         OrderPlanningMgt: Codeunit "Order Planning Mgt.";

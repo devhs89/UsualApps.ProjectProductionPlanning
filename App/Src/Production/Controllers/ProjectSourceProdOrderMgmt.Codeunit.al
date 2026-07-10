@@ -15,6 +15,7 @@ codeunit 71826211 ProjectSourceProdOrderMgmtUAS
         ProdOrder: Record "Production Order";
         Job: Record Job;
         Helper: Codeunit ProjectProdPlanningHelperUAS;
+        Events: Codeunit ProjSourceProdOrderEventsUAS;
         ProdOrderChoice: Enum "Planning Create Prod. Order";
         DemandNo: Code[20];
         CreatedProdOrders: TextBuilder;
@@ -24,6 +25,7 @@ codeunit 71826211 ProjectSourceProdOrderMgmtUAS
         CreatedProdOrderLabelTxt: Label 'Production Order(s) created:\%1', Comment = '%1 = List of production order numbers created';
         ModifiedProdOrderLabelTxt: Label 'Production Orders modified:\%1', Comment = '%1 = List of production order numbers modified';
     begin
+        // Set filters on the requisition line to retrieve only unplanned demand lines for the current project.
         if not Rec.FindSet() then begin
             Message(NoDemandLinesLabelTxt);
             exit;
@@ -35,23 +37,29 @@ codeunit 71826211 ProjectSourceProdOrderMgmtUAS
         // Validate the requisition line and ensure that the associated job exists.
         if not Job.Get(DemandNo) then Error('Job %1 not found.', DemandNo);
 
+        // Initialize the production order record and set the production order choice to "Firm Planned" by default.
         Clear(ProdOrder);
         ProdOrderChoice := Enum::"Production Order Status"::"Firm Planned";
 
-        this.OnProjectSourceProdOrderMgmtOnAfterSetProdOrderParameters(Rec, DemandNo, ProdOrderChoice);
+        // Raise an integration event to allow for customization or additional processing after setting the production order parameters.
+        Events.OnProjectSourceProdOrderMgmtOnAfterSetProdOrderParameters(Rec, DemandNo, ProdOrderChoice);
 
         repeat
+            // Check if a production order header already exists for the current requisition line and production order choice.
             if this.ProjectProdOrdersMgmt__ProductionHeaderExists(Rec, ProdOrderChoice, ProdOrder) then begin
                 if this.ProjectSourceProdOrderMgmt__CreateProductionOrderLine(Rec, ProdOrder) then
                     if (Text.StrPos(CreatedProdOrders.ToText(), ProdOrder."No.") = 0) and (Text.StrPos(ModifiedProdOrders.ToText(), ProdOrder."No.") = 0) then
                         ModifiedProdOrders.AppendLine(ProdOrder."No.");
-            end else
+            end
+            // If no existing production order header is found, create a new production order header and line for the current requisition line.
+            else
                 if this.ProjectSourceProdOrderMgmt__CreateProjectProductionOrderHeader(Rec, ProdOrder, ProdOrderChoice, Job) then begin
                     this.ProjectSourceProdOrderMgmt__CreateProductionOrderLine(Rec, ProdOrder);
                     if (Text.StrPos(CreatedProdOrders.ToText(), ProdOrder."No.") = 0) then CreatedProdOrders.AppendLine(ProdOrder."No.");
                 end;
         until Rec.Next() = 0;
 
+        // Display a message summarizing the created and modified production orders, if any, after processing all requisition lines.
         if CreatedProdOrders.Length() > 0 then MessageLabelTxt.AppendLine(StrSubstNo(CreatedProdOrderLabelTxt, CreatedProdOrders));
         if ModifiedProdOrders.Length() > 0 then MessageLabelTxt.AppendLine(StrSubstNo(ModifiedProdOrderLabelTxt, ModifiedProdOrders));
         Message(MessageLabelTxt.ToText());
@@ -161,11 +169,5 @@ codeunit 71826211 ProjectSourceProdOrderMgmtUAS
         if not Item.Get(ReqLine."No.") then Error('Item %1 not found.', ReqLine."No.");
         MfgAct.InsertProdOrderLine(ReqLine, ProdOrder, Item);
         exit(true);
-    end;
-
-    // Published Events
-    [IntegrationEvent(false, false)]
-    local procedure OnProjectSourceProdOrderMgmtOnAfterSetProdOrderParameters(var ReqLine: Record "Requisition Line"; DemandNo: Code[20]; ProdOrderChoice: Enum "Planning Create Prod. Order")
-    begin
     end;
 }

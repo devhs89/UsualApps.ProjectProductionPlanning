@@ -3,6 +3,7 @@ namespace UsualApps.ProjectProductionPlanning;
 using Microsoft.Inventory.Item;
 using Microsoft.Inventory.Planning;
 using Microsoft.Inventory.Requisition;
+using Microsoft.Manufacturing.Document;
 using Microsoft.Projects.Project.Planning;
 
 codeunit 71826210 ProjectProdPlanningHelperUAS
@@ -83,5 +84,22 @@ codeunit 71826210 ProjectProdPlanningHelperUAS
                     if Evaluate(DemandNo, ReqLine.GetFilter("Demand Order No.")) then;
                 end;
         end;
+    end;
+
+    /// <summary>
+    /// Stops the refresh of a project source production order if it is sourced from a project header. Raises an error if the production order is sourced from a project header and cannot be refreshed.
+    /// </summary>
+    /// <param name="ProdOrder">The production order record to check for project source and refresh status.</param>
+    internal procedure ProjectProdPlanningHelper__StopRefreshProjectSourceProductionOrder(var ProdOrder: Record "Production Order")
+    var
+        Evts: Codeunit ProjSourceProdOrderEventsUAS;
+        IsHandled: Boolean;
+    begin
+        IsHandled := false;
+        Evts.OnProjectSourceProdOrderOnBeforeStopRefresh(ProdOrder, IsHandled);
+
+        if IsHandled then exit;
+        if ProdOrder."Source Type" = ProdOrder."Source Type"::ProjectHeaderUAS then
+            Error('Project sourced firm planned production orders can not be refreshed. PLease delete and recreate production order from project card.');
     end;
 }

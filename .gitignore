@@ -19,5 +19,5 @@ rad.json
 .snapshots/
 cache_*
 ~$*
-*/**/.idea/
-*/**/.vs/
+**/.idea/
+**/.vs/
