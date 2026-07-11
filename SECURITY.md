@@ -1,41 +1,99 @@
-<!-- BEGIN MICROSOFT SECURITY.MD V0.0.5 BLOCK -->
+# Security Policy
 
-## Security
+UsualApps Inc. takes the security of Project Production Planning seriously. We
+appreciate responsible reports that help us protect Business Central customers
+and their data.
 
-Microsoft takes the security of our software products and services seriously, which includes all source code repositories managed through our GitHub organizations, which include [Microsoft](https://github.com/Microsoft), [Azure](https://github.com/Azure), [DotNet](https://github.com/dotnet), [AspNet](https://github.com/aspnet), [Xamarin](https://github.com/xamarin), and [our GitHub organizations](https://opensource.microsoft.com/).
+## Supported Versions
 
-If you believe you have found a security vulnerability in any Microsoft-owned repository that meets [Microsoft's definition of a security vulnerability](<https://docs.microsoft.com/en-us/previous-versions/tn-archive/cc751383(v=technet.10)>), please report it to us as described below.
+Security fixes are provided for the latest released version when a fix is
+appropriate. Older versions may require an upgrade to receive a security fix.
 
-## Reporting Security Issues
+| Version | Supported |
+| --- | --- |
+| Latest release | Yes |
+| Older releases | No |
 
-**Please do not report security vulnerabilities through public GitHub issues.**
+## Reporting a Vulnerability
 
-Instead, please report them to the Microsoft Security Response Center (MSRC) at [https://msrc.microsoft.com/create-report](https://msrc.microsoft.com/create-report).
+Do not disclose a suspected vulnerability in a public GitHub issue, discussion,
+pull request, or other public channel.
 
-If you prefer to submit without logging in, send email to [secure@microsoft.com](mailto:secure@microsoft.com). If possible, encrypt your message with our PGP key; please download it from the [Microsoft Security Response Center PGP Key page](https://www.microsoft.com/en-us/msrc/pgp-key-msrc).
+Use one of these private reporting methods:
 
-You should receive a response within 24 hours. If for some reason you do not, please follow up via email to ensure we received your original message. Additional information can be found at [microsoft.com/msrc](https://www.microsoft.com/msrc).
+1. Use the repository's **Security** tab and select **Report a vulnerability**
+   to open a private vulnerability report, if that option is available.
+2. Otherwise, contact UsualApps through the
+   [UsualApps contact form](https://usualapps.com/contact/) and state that you
+   need to report a security vulnerability in **Project Production Planning**.
+   Do not include exploit code, credentials, personal data, or other sensitive
+   details in the initial message. We will arrange an appropriate private
+   channel for the full report.
 
-Please include the requested information listed below (as much as you can provide) to help us better understand the nature and scope of the possible issue:
+Include as much of the following information as possible:
 
-- Type of issue (e.g. buffer overflow, SQL injection, cross-site scripting, etc.)
-- Full paths of source file(s) related to the manifestation of the issue
-- The location of the affected source code (tag/branch/commit or direct URL)
-- Any special configuration required to reproduce the issue
-- Step-by-step instructions to reproduce the issue
-- Proof-of-concept or exploit code (if possible)
-- Impact of the issue, including how an attacker might exploit the issue
+- A clear description of the vulnerability and its potential impact.
+- The affected version, commit, object, and file location.
+- Required Business Central version, configuration, permissions, and
+  prerequisites.
+- Reproduction steps or a minimal proof of concept.
+- Relevant logs or screenshots with credentials, customer information, and
+  other sensitive data removed.
+- Any known mitigations or workarounds.
+- Your preferred contact details and whether you want public acknowledgment.
 
-This information will help us triage your report more quickly.
+We aim to acknowledge a complete report within five business days. We will
+investigate, assess its impact, and provide status updates when practical.
+Remediation timing depends on severity, complexity, platform dependencies, and
+release requirements. Please allow us a reasonable opportunity to investigate
+and address the issue before public disclosure.
 
-If you are reporting for a bug bounty, more complete reports can contribute to a higher bounty award. Please visit our [Microsoft Bug Bounty Program](https://microsoft.com/msrc/bounty) page for more details about our active programs.
+## Scope
 
-## Preferred Languages
+This policy covers vulnerabilities in the Project Production Planning
+application and repository-specific configuration maintained by UsualApps Inc.
 
-We prefer all communications to be in English.
+The repository uses Microsoft's AL-Go for GitHub tooling. If a vulnerability is
+in AL-Go, an AL-Go Action, or another third-party dependency rather than this
+repository's code or configuration, report it privately to that project's
+maintainer under its security policy. You may also notify UsualApps privately if
+the vulnerability affects this repository.
 
-## Policy
+### Microsoft and AL-Go Security Issues
 
-Microsoft follows the principle of [Coordinated Vulnerability Disclosure](https://www.microsoft.com/en-us/msrc/cvd).
+For vulnerabilities originating in Microsoft-maintained AL-Go tooling, use the
+applicable Microsoft resource:
 
-<!-- END MICROSOFT SECURITY.MD BLOCK -->
+- Review the source and project information in the
+  [Microsoft AL-Go repository](https://github.com/microsoft/AL-Go).
+- Submit a confidential report through the
+  [Microsoft Security Response Center](https://msrc.microsoft.com/create-report).
+- If you cannot use the submission portal, contact
+  [secure@microsoft.com](mailto:secure@microsoft.com).
+- Use the [MSRC public PGP key](https://www.microsoft.com/en-us/msrc/pgp-key)
+  when encrypted email is appropriate.
+- Review Microsoft's
+  [Coordinated Vulnerability Disclosure guidance](https://www.microsoft.com/en-us/msrc/cvd)
+  before publicly disclosing a Microsoft vulnerability.
+
+Do not send vulnerabilities in UsualApps application code to Microsoft. Report
+those to UsualApps using the private methods described above.
+
+Security reports are not a support channel for ordinary defects, feature
+requests, configuration assistance, or questions without a security impact.
+
+## Responsible Research
+
+- Do not access, modify, retain, or disclose data that does not belong to you.
+- Do not test against production systems or other people's environments.
+- Do not perform denial-of-service, social-engineering, phishing, spam, or
+  destructive testing.
+- Stop testing and report the issue immediately if you encounter sensitive or
+  personal data.
+- Keep vulnerability details confidential until UsualApps has addressed the
+  issue or agreed to a disclosure plan.
+
+This policy does not grant a license to the software or authorization to test
+systems owned or operated by UsualApps Inc. or any third party. Obtain prior
+written authorization before conducting security testing. See
+[LICENSE.md](LICENSE.md) for the repository's license terms.
