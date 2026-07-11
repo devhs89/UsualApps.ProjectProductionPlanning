@@ -1,1 +1,8 @@
-* @microsoft/dynamics-smb-engineering-systems
+# Below user is the default owner for all files,
+# including all application code under /App/.
+* @devhs89
+
+# The Dynamics SMB Engineering Systems team maintains the AL-Go template and
+# automation files. @dev89 remains a co-owner of these repository-specific files.
+/.AL-Go/*   @microsoft/dynamics-smb-engineering-systems @dev89
+/.github/*  @microsoft/dynamics-smb-engineering-systems @dev89
