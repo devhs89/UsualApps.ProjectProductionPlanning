@@ -2,7 +2,7 @@
  "id": "ae4aa83f-af2d-44ff-aa57-81be5d85ea8c",
  "name": "Project Production Planning",
  "publisher": "UsualApps Inc.",
- "version": "1.0.0.0",
+ "version": "1.0.0.1",
  "brief": "Create consolidated production orders from project planning demand.",
  "description": "Adds project-driven production planning to Microsoft Dynamics 365 Business Central. From the Project Card, users can review production demand calculated from project planning lines, adjust quantities and reservation choices, and create or update consolidated project-sourced production orders. Project-sourced production order refresh is currently blocked because refresh handling is not implemented; an integration event is available so subscribers can suppress the default error and provide custom handling.",
  "privacyStatement": "https://usualapps.com/privacy",
