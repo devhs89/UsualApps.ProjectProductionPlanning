@@ -105,3 +105,7 @@ App/
 ## Packaging
 
 Build and publish the extension with the AL tooling for Business Central. The repository includes downloaded platform and application packages in `App/.alpackages` and a packaged app artifact under `App/Test`.
+
+## License
+
+Copyright © 2026 UsualApps Inc. All rights reserved. This project is proprietary and is not licensed for copying, modification, distribution, sale, resale, commercialization, monetization, or other use without prior express written permission from UsualApps Inc. See [`LICENSE.md`](LICENSE.md) for the complete notice.
