@@ -21,3 +21,6 @@ cache_*
 ~$*
 **/.idea/
 **/.vs/
+**/.vscode/
+!**/.vscode/launch.json
+!**/.vscode/settings.json
